@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import '../models/health_models.dart';
 import '../utils/health_utils.dart';
+import '../constants/health_metrics.dart';
 
 class GoogleFitService {
   static Future<List<HealthDataPoint>> fetchDetailedTimeSeriesData(
@@ -506,5 +507,343 @@ class GoogleFitService {
       debugPrint('Error parsing blood pressure point: $e');
       return null;
     }
+  }
+
+  // Enhanced Smartwatch Data Methods
+  static Future<List<HealthDataPoint>> fetchStressData(
+    String accessToken,
+    int startTime,
+    int endTime,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+          'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate',
+        ),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "aggregateBy": [
+            {"dataTypeName": "com.google.fitness.heart.variability"},
+          ],
+          "bucketByTime": {"durationMillis": 3600000}, // Hourly
+          "startTimeMillis": startTime,
+          "endTimeMillis": endTime,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        List<HealthDataPoint> stressPoints = [];
+
+        if (data['bucket'] != null) {
+          for (var bucket in data['bucket']) {
+            if (bucket['dataset'] != null && bucket['dataset'].isNotEmpty) {
+              for (var dataset in bucket['dataset']) {
+                if (dataset['point'] != null && dataset['point'].isNotEmpty) {
+                  for (var point in dataset['point']) {
+                    final stressPoint = _parseStressPoint(point);
+                    if (stressPoint != null) {
+                      stressPoints.add(stressPoint);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        return stressPoints;
+      }
+    } catch (e) {
+      debugPrint('Error fetching stress data: $e');
+    }
+    return [];
+  }
+
+  static HealthDataPoint? _parseStressPoint(Map<String, dynamic> point) {
+    try {
+      if (point['value'] == null || point['value'].isEmpty) return null;
+
+      final value = point['value'][0];
+      double? stressLevel;
+
+      // Calculate stress from HRV data (simplified calculation)
+      if (value['fpVal'] != null) {
+        double hrv = value['fpVal'].toDouble();
+        // Higher HRV typically means lower stress (inverse relationship)
+        stressLevel = 100 - (hrv / 50 * 100).clamp(0, 100);
+      }
+
+      if (stressLevel == null) return null;
+
+      final timestamp = DateTime.fromMillisecondsSinceEpoch(
+        int.parse(point['startTimeNanos']) ~/ 1000000,
+      );
+
+      return HealthDataPoint(timestamp: timestamp, value: stressLevel);
+    } catch (e) {
+      debugPrint('Error parsing stress point: $e');
+      return null;
+    }
+  }
+
+  static Future<List<HealthDataPoint>> fetchVO2MaxData(
+    String accessToken,
+    int startTime,
+    int endTime,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+          'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate',
+        ),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "aggregateBy": [
+            {"dataTypeName": "com.google.fitness.aerobic.capacity"},
+          ],
+          "bucketByTime": {"durationMillis": 86400000}, // Daily
+          "startTimeMillis": startTime,
+          "endTimeMillis": endTime,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        List<HealthDataPoint> vo2Points = [];
+
+        if (data['bucket'] != null) {
+          for (var bucket in data['bucket']) {
+            if (bucket['dataset'] != null && bucket['dataset'].isNotEmpty) {
+              for (var dataset in bucket['dataset']) {
+                if (dataset['point'] != null && dataset['point'].isNotEmpty) {
+                  for (var point in dataset['point']) {
+                    final vo2Point = _parseVO2Point(point);
+                    if (vo2Point != null) {
+                      vo2Points.add(vo2Point);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        return vo2Points;
+      }
+    } catch (e) {
+      debugPrint('Error fetching VO2 Max data: $e');
+    }
+    return [];
+  }
+
+  static HealthDataPoint? _parseVO2Point(Map<String, dynamic> point) {
+    try {
+      if (point['value'] == null || point['value'].isEmpty) return null;
+
+      final value = point['value'][0];
+      double? vo2Max;
+
+      if (value['fpVal'] != null) {
+        vo2Max = value['fpVal'].toDouble();
+      }
+
+      if (vo2Max == null) return null;
+
+      final timestamp = DateTime.fromMillisecondsSinceEpoch(
+        int.parse(point['startTimeNanos']) ~/ 1000000,
+      );
+
+      return HealthDataPoint(timestamp: timestamp, value: vo2Max);
+    } catch (e) {
+      debugPrint('Error parsing VO2 point: $e');
+      return null;
+    }
+  }
+
+  static Future<Map<String, List<HealthDataPoint>>> fetchWorkoutData(
+    String accessToken,
+    int startTime,
+    int endTime,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+          'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate',
+        ),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "aggregateBy": [
+            {"dataTypeName": "com.google.activity.segment"},
+          ],
+          "bucketByTime": {"durationMillis": 86400000}, // Daily
+          "startTimeMillis": startTime,
+          "endTimeMillis": endTime,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        List<HealthDataPoint> sessionPoints = [];
+        List<HealthDataPoint> durationPoints = [];
+
+        if (data['bucket'] != null) {
+          Map<String, int> dailySessions = {};
+          Map<String, double> dailyDuration = {};
+
+          for (var bucket in data['bucket']) {
+            if (bucket['dataset'] != null && bucket['dataset'].isNotEmpty) {
+              for (var dataset in bucket['dataset']) {
+                if (dataset['point'] != null && dataset['point'].isNotEmpty) {
+                  for (var point in dataset['point']) {
+                    final workoutData = _parseWorkoutPoint(point);
+                    if (workoutData != null) {
+                      final dayKey =
+                          '${workoutData['date'].year}-${workoutData['date'].month}-${workoutData['date'].day}';
+                      dailySessions[dayKey] = (dailySessions[dayKey] ?? 0) + 1;
+                      dailyDuration[dayKey] =
+                          (dailyDuration[dayKey] ?? 0) +
+                          workoutData['duration'];
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // Convert to daily aggregates
+          dailySessions.forEach((day, sessions) {
+            DateTime date = DateTime.parse('$day 00:00:00');
+            sessionPoints.add(
+              HealthDataPoint(timestamp: date, value: sessions.toDouble()),
+            );
+          });
+
+          dailyDuration.forEach((day, duration) {
+            DateTime date = DateTime.parse('$day 00:00:00');
+            durationPoints.add(
+              HealthDataPoint(timestamp: date, value: duration),
+            );
+          });
+        }
+
+        return {
+          'workout_sessions': sessionPoints,
+          'workout_duration': durationPoints,
+        };
+      }
+    } catch (e) {
+      debugPrint('Error fetching workout data: $e');
+    }
+    return {};
+  }
+
+  static Map<String, dynamic>? _parseWorkoutPoint(Map<String, dynamic> point) {
+    try {
+      if (point['value'] == null || point['value'].isEmpty) return null;
+
+      final value = point['value'][0];
+      int? activityType;
+      double duration = 0;
+
+      if (value['intVal'] != null) {
+        activityType = value['intVal'];
+      }
+
+      // Calculate duration from start and end times
+      final startTime = int.parse(point['startTimeNanos']) ~/ 1000000;
+      final endTime = int.parse(point['endTimeNanos']) ~/ 1000000;
+      duration = (endTime - startTime) / 60000.0; // Convert to minutes
+
+      final date = DateTime.fromMillisecondsSinceEpoch(startTime);
+
+      return {'date': date, 'activityType': activityType, 'duration': duration};
+    } catch (e) {
+      debugPrint('Error parsing workout point: $e');
+      return null;
+    }
+  }
+
+  static Future<List<HealthDataPoint>> fetchHydrationData(
+    String accessToken,
+    int startTime,
+    int endTime,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+          'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate',
+        ),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "aggregateBy": [
+            {"dataTypeName": "com.google.hydration"},
+          ],
+          "bucketByTime": {"durationMillis": 86400000}, // Daily
+          "startTimeMillis": startTime,
+          "endTimeMillis": endTime,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return _parseTimeSeriesData(
+          data,
+          HealthMetrics.metricsToTrack['hydration']!,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error fetching hydration data: $e');
+    }
+    return [];
+  }
+
+  static Future<List<HealthDataPoint>> fetchRespiratoryRateData(
+    String accessToken,
+    int startTime,
+    int endTime,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+          'https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate',
+        ),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "aggregateBy": [
+            {"dataTypeName": "com.google.respiratory_rate"},
+          ],
+          "bucketByTime": {"durationMillis": 3600000}, // Hourly
+          "startTimeMillis": startTime,
+          "endTimeMillis": endTime,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return _parseTimeSeriesData(
+          data,
+          HealthMetrics.metricsToTrack['respiratory_rate']!,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error fetching respiratory rate data: $e');
+    }
+    return [];
   }
 }

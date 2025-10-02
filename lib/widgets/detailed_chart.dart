@@ -48,9 +48,9 @@ class _DetailedChartState extends State<DetailedChart> {
       return Container(
         height: 300,
         decoration: BoxDecoration(
-          color: AppTheme.surfacePrimary,
+          color: AppTheme.surfacePure,
           borderRadius: BorderRadius.circular(AppTheme.radiusL),
-          border: Border.all(color: AppTheme.borderLight),
+          border: Border.all(color: AppTheme.borderSubtle),
         ),
         child: Center(
           child: Column(
@@ -59,13 +59,13 @@ class _DetailedChartState extends State<DetailedChart> {
               Icon(
                 Icons.bar_chart_rounded,
                 size: 48,
-                color: AppTheme.textTertiary,
+                color: AppTheme.textTertiaryDark,
               ),
               const SizedBox(height: AppTheme.spacingS),
               Text(
                 'Insufficient data for chart',
                 style: AppTheme.bodyMedium.copyWith(
-                  color: AppTheme.textTertiary,
+                  color: AppTheme.textTertiaryDark,
                 ),
               ),
             ],
@@ -76,10 +76,10 @@ class _DetailedChartState extends State<DetailedChart> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surfacePrimary,
+        color: AppTheme.surfacePure,
         borderRadius: BorderRadius.circular(AppTheme.radiusL),
-        border: Border.all(color: AppTheme.borderLight),
-        boxShadow: AppTheme.shadowSoft,
+        border: Border.all(color: AppTheme.borderSubtle),
+        boxShadow: AppTheme.elevationSoft,
       ),
       child: Column(
         children: [
@@ -88,7 +88,7 @@ class _DetailedChartState extends State<DetailedChart> {
             padding: const EdgeInsets.all(AppTheme.spacingM),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: AppTheme.borderLight, width: 1),
+                bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
               ),
             ),
             child: Row(
@@ -123,7 +123,7 @@ class _DetailedChartState extends State<DetailedChart> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surfaceSecondary,
+        color: AppTheme.surfaceElevated,
         borderRadius: BorderRadius.circular(AppTheme.radiusM),
       ),
       child: Row(
@@ -140,13 +140,18 @@ class _DetailedChartState extends State<DetailedChart> {
                   ),
                   decoration: BoxDecoration(
                     color:
-                        isSelected ? AppTheme.primaryBlue : Colors.transparent,
+                        isSelected
+                            ? AppTheme.primaryMedical
+                            : Colors.transparent,
                     borderRadius: BorderRadius.circular(AppTheme.radiusS),
                   ),
                   child: Text(
                     period,
                     style: AppTheme.bodySmall.copyWith(
-                      color: isSelected ? Colors.white : AppTheme.textSecondary,
+                      color:
+                          isSelected
+                              ? Colors.white
+                              : AppTheme.textSecondaryDark,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.w500,
                       fontSize: 12,
@@ -182,7 +187,7 @@ class _DetailedChartState extends State<DetailedChart> {
           drawVerticalLine: false,
           horizontalInterval: (paddedMax - paddedMin) / 4,
           getDrawingHorizontalLine: (value) {
-            return FlLine(color: AppTheme.borderLight, strokeWidth: 1);
+            return FlLine(color: AppTheme.borderSubtle, strokeWidth: 1);
           },
         ),
 
@@ -197,7 +202,7 @@ class _DetailedChartState extends State<DetailedChart> {
                   child: Text(
                     HealthUtils.formatValue(value, widget.metric),
                     style: AppTheme.bodySmall.copyWith(
-                      color: AppTheme.textTertiary,
+                      color: AppTheme.textTertiaryDark,
                       fontSize: 10,
                     ),
                   ),
@@ -219,7 +224,7 @@ class _DetailedChartState extends State<DetailedChart> {
                     child: Text(
                       '${point.timestamp.month}/${point.timestamp.day}',
                       style: AppTheme.bodySmall.copyWith(
-                        color: AppTheme.textTertiary,
+                        color: AppTheme.textTertiaryDark,
                         fontSize: 10,
                       ),
                     ),
@@ -256,7 +261,7 @@ class _DetailedChartState extends State<DetailedChart> {
               getDotPainter: (spot, percent, barData, index) {
                 return FlDotCirclePainter(
                   radius: 4,
-                  color: AppTheme.surfacePrimary,
+                  color: AppTheme.surfacePure,
                   strokeWidth: 2,
                   strokeColor: widget.metric.color,
                 );
@@ -280,14 +285,14 @@ class _DetailedChartState extends State<DetailedChart> {
         lineTouchData: LineTouchData(
           enabled: true,
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (touchedSpot) => AppTheme.surfaceSecondary,
+            getTooltipColor: (touchedSpot) => AppTheme.surfaceElevated,
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((touchedSpot) {
                 final point = filteredData[touchedSpot.x.toInt()];
                 return LineTooltipItem(
                   '${HealthUtils.formatValue(touchedSpot.y, widget.metric)}\n${point.timestamp.month}/${point.timestamp.day}',
                   AppTheme.bodySmall.copyWith(
-                    color: AppTheme.textPrimary,
+                    color: AppTheme.textPrimaryDark,
                     fontWeight: FontWeight.w600,
                   ),
                 );
@@ -305,7 +310,7 @@ class _DetailedChartState extends State<DetailedChart> {
                   getDotPainter: (spot, percent, barData, index) {
                     return FlDotCirclePainter(
                       radius: 6,
-                      color: AppTheme.surfacePrimary,
+                      color: AppTheme.surfacePure,
                       strokeWidth: 3,
                       strokeColor: widget.metric.color,
                     );

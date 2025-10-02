@@ -85,7 +85,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.surfaceTertiary,
+      backgroundColor: AppTheme.surfaceContainer,
       appBar: AppBar(
         title: Text(
           'SmartHealth',
@@ -94,7 +94,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        backgroundColor: AppTheme.primaryBlue,
+        backgroundColor: AppTheme.primaryMedical,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -107,7 +107,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
             ),
             child: DropdownButton<int>(
               value: _selectedDays,
-              dropdownColor: AppTheme.primaryBlue,
+              dropdownColor: AppTheme.primaryMedical,
               style: AppTheme.bodyMedium.copyWith(color: Colors.white),
               underline: Container(),
               icon: Icon(
@@ -144,9 +144,9 @@ class _DemoHomePageState extends State<DemoHomePage> {
             // Demo User Header
             Container(
               decoration: BoxDecoration(
-                gradient: AppTheme.primaryGradient,
+                gradient: AppTheme.primaryHealthGradient,
                 borderRadius: BorderRadius.circular(AppTheme.radiusL),
-                boxShadow: AppTheme.shadowSoft,
+                boxShadow: AppTheme.elevationSoft,
               ),
               child: Padding(
                 padding: const EdgeInsets.all(AppTheme.spacingL),
@@ -197,7 +197,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                         // Show bottom sheet with time period options
                         showModalBottomSheet(
                           context: context,
-                          backgroundColor: AppTheme.surfacePrimary,
+                          backgroundColor: AppTheme.surfacePure,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.vertical(
                               top: Radius.circular(AppTheme.radiusL),
@@ -225,7 +225,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                                             _selectedDays == days
                                                 ? Icon(
                                                   Icons.check,
-                                                  color: AppTheme.primaryBlue,
+                                                  color: AppTheme.primaryMedical,
                                                 )
                                                 : null,
                                         onTap: () {
@@ -292,7 +292,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                   return _buildDemoCard(
                     'Steps',
                     Icons.directions_walk_rounded,
-                    AppTheme.primaryBlue,
+                    AppTheme.primaryMedical,
                     data['current']!,
                     data['avg']!,
                   );
@@ -302,7 +302,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                   return _buildDemoCard(
                     'Distance',
                     Icons.route_rounded,
-                    AppTheme.secondaryTeal,
+                    AppTheme.activity,
                     data['current']!,
                     data['avg']!,
                   );
@@ -312,7 +312,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                   return _buildDemoCard(
                     'Calories',
                     Icons.local_fire_department_rounded,
-                    AppTheme.accentOrange,
+                    AppTheme.nutrition,
                     data['current']!,
                     data['avg']!,
                   );
@@ -322,7 +322,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                   return _buildDemoCard(
                     'Active Minutes',
                     Icons.timer_rounded,
-                    AppTheme.accentPurple,
+                    AppTheme.sleep,
                     data['current']!,
                     data['avg']!,
                   );
@@ -349,7 +349,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                   return _buildDemoCard(
                     'Heart Rate',
                     Icons.favorite_rounded,
-                    AppTheme.accentRed,
+                    AppTheme.error,
                     data['current']!,
                     data['avg']!,
                   );
@@ -359,7 +359,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                   return _buildDemoCard(
                     'Sleep',
                     Icons.bedtime_rounded,
-                    AppTheme.primaryBlue,
+                    AppTheme.primaryMedical,
                     data['current']!,
                     data['avg']!,
                   );
@@ -381,10 +381,10 @@ class _DemoHomePageState extends State<DemoHomePage> {
   ) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surfacePrimary,
+        color: AppTheme.surfacePure,
         borderRadius: BorderRadius.circular(AppTheme.radiusL),
-        border: Border.all(color: AppTheme.borderLight, width: 1),
-        boxShadow: AppTheme.shadowSoft,
+        border: Border.all(color: AppTheme.borderSubtle, width: 1),
+        boxShadow: AppTheme.elevationSoft,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,7 +445,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                   Text(
                     title,
                     style: AppTheme.bodyMedium.copyWith(
-                      color: AppTheme.textSecondary,
+                      color: AppTheme.textSecondaryDark,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -476,7 +476,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppTheme.accentGreen.withValues(alpha: 0.1),
+                          color: AppTheme.success.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Row(
@@ -485,13 +485,13 @@ class _DemoHomePageState extends State<DemoHomePage> {
                             Icon(
                               Icons.trending_up_rounded,
                               size: 12,
-                              color: AppTheme.accentGreen,
+                              color: AppTheme.success,
                             ),
                             const SizedBox(width: 2),
                             Text(
                               'Up',
                               style: AppTheme.bodySmall.copyWith(
-                                color: AppTheme.accentGreen,
+                                color: AppTheme.success,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -504,7 +504,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                         'Avg $avgValue',
                         style: AppTheme.bodySmall.copyWith(
                           fontSize: 10,
-                          color: AppTheme.textTertiary,
+                          color: AppTheme.textTertiaryDark,
                         ),
                       ),
                     ],

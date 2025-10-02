@@ -20,12 +20,12 @@ class CategoryHeader extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+              color: AppTheme.primaryMedical.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppTheme.radiusM),
             ),
             child: Icon(
               HealthMetrics.categoryIcons[category] ?? Icons.health_and_safety,
-              color: AppTheme.primaryBlue,
+              color: AppTheme.primaryMedical,
               size: 20,
             ),
           ),
@@ -45,7 +45,7 @@ class CategoryHeader extends StatelessWidget {
                 Text(
                   'Track your ${category.toLowerCase()} metrics',
                   style: AppTheme.bodyMedium.copyWith(
-                    color: AppTheme.textSecondary,
+                    color: AppTheme.textSecondaryDark,
                     fontSize: 14,
                   ),
                 ),
@@ -59,7 +59,7 @@ class CategoryHeader extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
-                colors: [AppTheme.borderLight, Colors.transparent],
+                colors: [AppTheme.borderSubtle, Colors.transparent],
               ),
             ),
           ),

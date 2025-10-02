@@ -13,10 +13,10 @@ class DetailedStats extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surfacePrimary,
+        color: AppTheme.surfacePure,
         borderRadius: BorderRadius.circular(AppTheme.radiusL),
-        border: Border.all(color: AppTheme.borderLight),
-        boxShadow: AppTheme.shadowSoft,
+        border: Border.all(color: AppTheme.borderSubtle),
+        boxShadow: AppTheme.elevationSoft,
       ),
       child: Column(
         children: [
@@ -25,14 +25,14 @@ class DetailedStats extends StatelessWidget {
             padding: const EdgeInsets.all(AppTheme.spacingM),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: AppTheme.borderLight, width: 1),
+                bottom: BorderSide(color: AppTheme.borderSubtle, width: 1),
               ),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.analytics_outlined,
-                  color: AppTheme.textSecondary,
+                  color: AppTheme.textSecondaryDark,
                   size: 20,
                 ),
                 const SizedBox(width: AppTheme.spacingS),
@@ -67,7 +67,7 @@ class DetailedStats extends StatelessWidget {
                         'Average',
                         HealthUtils.formatValue(summary.average, metric),
                         Icons.show_chart_rounded,
-                        AppTheme.secondaryTeal,
+                        AppTheme.activity,
                       ),
                     ),
                   ],
@@ -80,7 +80,7 @@ class DetailedStats extends StatelessWidget {
                         'Minimum',
                         HealthUtils.formatValue(summary.min, metric),
                         Icons.keyboard_arrow_down_rounded,
-                        AppTheme.accentOrange,
+                        AppTheme.nutrition,
                       ),
                     ),
                     const SizedBox(width: AppTheme.spacingS),
@@ -89,7 +89,7 @@ class DetailedStats extends StatelessWidget {
                         'Maximum',
                         HealthUtils.formatValue(summary.max, metric),
                         Icons.keyboard_arrow_up_rounded,
-                        AppTheme.accentGreen,
+                        AppTheme.success,
                       ),
                     ),
                   ],
@@ -144,7 +144,7 @@ class DetailedStats extends StatelessWidget {
                             Text(
                               _getTrendDescription(summary.trend),
                               style: AppTheme.bodySmall.copyWith(
-                                color: AppTheme.textSecondary,
+                                color: AppTheme.textSecondaryDark,
                                 fontSize: 12,
                               ),
                             ),
@@ -171,9 +171,9 @@ class DetailedStats extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacingM),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceSecondary,
+        color: AppTheme.surfaceElevated,
         borderRadius: BorderRadius.circular(AppTheme.radiusM),
-        border: Border.all(color: AppTheme.borderLight),
+        border: Border.all(color: AppTheme.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,7 +185,7 @@ class DetailedStats extends StatelessWidget {
               Text(
                 label,
                 style: AppTheme.bodySmall.copyWith(
-                  color: AppTheme.textSecondary,
+                  color: AppTheme.textSecondaryDark,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -206,9 +206,9 @@ class DetailedStats extends StatelessWidget {
   }
 
   Color _getTrendColor(double trend) {
-    if (trend > 0.05) return AppTheme.accentGreen;
-    if (trend < -0.05) return AppTheme.accentRed;
-    return AppTheme.textSecondary;
+    if (trend > 0.05) return AppTheme.success;
+    if (trend < -0.05) return AppTheme.error;
+    return AppTheme.textSecondaryDark;
   }
 
   IconData _getTrendIcon(double trend) {

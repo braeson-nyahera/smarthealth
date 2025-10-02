@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 // Enums
-enum ValueType { integer, decimal }
+enum ValueType { integer, decimal, string }
 
 // Data Models
 class HealthDataPoint {

@@ -70,6 +70,13 @@ class HealthDataService {
         newTimeSeriesData,
         newSummaryData,
       );
+      await _fetchEnhancedSmartwatchData(
+        accessToken,
+        startTime,
+        endTime,
+        newTimeSeriesData,
+        newSummaryData,
+      );
 
       return {
         'timeSeriesData': newTimeSeriesData,
@@ -288,6 +295,141 @@ class HealthDataService {
       }
     } catch (e) {
       debugPrint('Error fetching weight data: $e');
+    }
+  }
+
+  Future<void> _fetchEnhancedSmartwatchData(
+    String accessToken,
+    int startTime,
+    int endTime,
+    Map<String, List<HealthDataPoint>> timeSeriesData,
+    Map<String, HealthSummary> summaryData,
+  ) async {
+    // Fetch stress level data
+    try {
+      final stressData = await GoogleFitService.fetchStressData(
+        accessToken,
+        startTime,
+        endTime,
+      );
+      if (stressData.isNotEmpty) {
+        timeSeriesData['stress_level'] = stressData;
+        summaryData['stress_level'] = HealthUtils.calculateSummary(stressData);
+      }
+    } catch (e) {
+      debugPrint('Error fetching stress data: $e');
+    }
+
+    // Fetch VO2 Max data
+    try {
+      final vo2Data = await GoogleFitService.fetchVO2MaxData(
+        accessToken,
+        startTime,
+        endTime,
+      );
+      if (vo2Data.isNotEmpty) {
+        timeSeriesData['vo2_max'] = vo2Data;
+        summaryData['vo2_max'] = HealthUtils.calculateSummary(vo2Data);
+      }
+    } catch (e) {
+      debugPrint('Error fetching VO2 Max data: $e');
+    }
+
+    // Fetch workout data
+    try {
+      final workoutData = await GoogleFitService.fetchWorkoutData(
+        accessToken,
+        startTime,
+        endTime,
+      );
+
+      if (workoutData['workout_sessions']?.isNotEmpty == true) {
+        timeSeriesData['workout_sessions'] = workoutData['workout_sessions']!;
+        summaryData['workout_sessions'] = HealthUtils.calculateSummary(
+          workoutData['workout_sessions']!,
+        );
+      }
+
+      if (workoutData['workout_duration']?.isNotEmpty == true) {
+        timeSeriesData['workout_duration'] = workoutData['workout_duration']!;
+        summaryData['workout_duration'] = HealthUtils.calculateSummary(
+          workoutData['workout_duration']!,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error fetching workout data: $e');
+    }
+
+    // Fetch hydration data
+    try {
+      final hydrationData = await GoogleFitService.fetchHydrationData(
+        accessToken,
+        startTime,
+        endTime,
+      );
+      if (hydrationData.isNotEmpty) {
+        timeSeriesData['hydration'] = hydrationData;
+        summaryData['hydration'] = HealthUtils.calculateSummary(hydrationData);
+      }
+    } catch (e) {
+      debugPrint('Error fetching hydration data: $e');
+    }
+
+    // Fetch respiratory rate data
+    try {
+      final respiratoryData = await GoogleFitService.fetchRespiratoryRateData(
+        accessToken,
+        startTime,
+        endTime,
+      );
+      if (respiratoryData.isNotEmpty) {
+        timeSeriesData['respiratory_rate'] = respiratoryData;
+        summaryData['respiratory_rate'] = HealthUtils.calculateSummary(
+          respiratoryData,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error fetching respiratory rate data: $e');
+    }
+
+    // Fetch move minutes (enhanced activity tracking)
+    try {
+      final moveMinutesData =
+          await GoogleFitService.fetchDetailedTimeSeriesData(
+            accessToken,
+            HealthMetrics.metricsToTrack['move_minutes']!,
+            startTime,
+            endTime,
+            'move_minutes',
+          );
+      if (moveMinutesData.isNotEmpty) {
+        timeSeriesData['move_minutes'] = moveMinutesData;
+        summaryData['move_minutes'] = HealthUtils.calculateSummary(
+          moveMinutesData,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error fetching move minutes data: $e');
+    }
+
+    // Fetch hourly steps for activity pattern analysis
+    try {
+      final hourlyStepsData =
+          await GoogleFitService.fetchDetailedTimeSeriesData(
+            accessToken,
+            HealthMetrics.metricsToTrack['steps']!,
+            startTime,
+            endTime,
+            'hourly_steps',
+          );
+      if (hourlyStepsData.isNotEmpty) {
+        timeSeriesData['hourly_steps'] = hourlyStepsData;
+        summaryData['hourly_steps'] = HealthUtils.calculateSummary(
+          hourlyStepsData,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error fetching hourly steps data: $e');
     }
   }
 }

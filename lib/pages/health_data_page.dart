@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/health_models.dart';
@@ -10,6 +11,7 @@ import '../widgets/category_header.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/detailed_chart.dart';
 import '../widgets/detailed_stats.dart';
+import '../widgets/smartwatch_stats_card.dart';
 
 class HealthDataPage extends StatefulWidget {
   const HealthDataPage({super.key});
@@ -27,6 +29,69 @@ class _HealthDataPageState extends State<HealthDataPage> {
   String _debugMessage = '';
   bool _isLoading = false;
   int _selectedDays = 7;
+  Timer? _refreshTimer;
+  DateTime? _lastFetchTime;
+  bool _isAutoRefreshing = false;
+  int _autoRefreshFailures = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _healthDataService.googleSignIn.signOut();
+    super.dispose();
+  }
+
+  String _getAutoRefreshStatus() {
+    if (_isAutoRefreshing) return 'updating...';
+    if (_autoRefreshFailures > 0) return 'retry';
+
+    if (_lastFetchTime != null) {
+      final now = DateTime.now();
+      final minutesAgo = now.difference(_lastFetchTime!).inMinutes;
+      if (minutesAgo < 1) return 'just now';
+      if (minutesAgo < 60) return '${minutesAgo}m ago';
+      final hoursAgo = (minutesAgo / 60).floor();
+      return '${hoursAgo}h ago';
+    }
+
+    return '2min';
+  }
+
+  void _startAutoRefresh() {
+    // Auto-refresh every 2 minutes when user is signed in
+    _refreshTimer = Timer.periodic(Duration(minutes: 2), (timer) {
+      if (_user != null && mounted && !_isLoading) {
+        // Add a small delay check to prevent too frequent calls
+        final now = DateTime.now();
+
+        // Implement exponential backoff for failed attempts
+        final backoffMinutes =
+            _autoRefreshFailures > 0
+                ? 2 *
+                    (1 <<
+                        (_autoRefreshFailures.clamp(
+                          0,
+                          4,
+                        ))) // Max 32 minutes backoff
+                : 2;
+
+        final timeSinceLastFetch =
+            _lastFetchTime != null
+                ? now.difference(_lastFetchTime!).inMinutes
+                : backoffMinutes;
+
+        if (_lastFetchTime == null || timeSinceLastFetch >= backoffMinutes) {
+          _fetchComprehensiveHealthData(isAutoRefresh: true);
+        }
+      }
+    });
+  }
 
   Future<void> _handleSignIn() async {
     setState(() => _isLoading = true);
@@ -45,12 +110,21 @@ class _HealthDataPageState extends State<HealthDataPage> {
     }
   }
 
-  Future<void> _fetchComprehensiveHealthData() async {
+  Future<void> _fetchComprehensiveHealthData({
+    bool isAutoRefresh = false,
+  }) async {
     if (_user == null) return;
 
+    // Record the fetch time
+    _lastFetchTime = DateTime.now();
+
     setState(() {
-      _isLoading = true;
-      _debugMessage = 'Fetching comprehensive health data...';
+      _isLoading = !isAutoRefresh; // Don't show full loading for auto-refresh
+      _isAutoRefreshing = isAutoRefresh;
+      _debugMessage =
+          isAutoRefresh
+              ? 'Auto-refreshing health data...'
+              : 'Fetching comprehensive health data...';
     });
 
     try {
@@ -65,9 +139,28 @@ class _HealthDataPageState extends State<HealthDataPage> {
         _debugMessage = result['message'];
       });
     } catch (error) {
-      setState(() => _debugMessage = 'Error fetching data: $error');
+      if (isAutoRefresh) {
+        _autoRefreshFailures++;
+        // For auto-refresh failures, show a less intrusive message
+        setState(
+          () =>
+              _debugMessage =
+                  'Auto-refresh failed (${_autoRefreshFailures}x). Will retry...',
+        );
+      } else {
+        _autoRefreshFailures = 0; // Reset on manual refresh
+        setState(() => _debugMessage = 'Error fetching data: $error');
+      }
     } finally {
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _isAutoRefreshing = false;
+      });
+
+      // Reset failure count on successful fetch
+      if (!isAutoRefresh) {
+        _autoRefreshFailures = 0;
+      }
     }
   }
 
@@ -154,7 +247,7 @@ class _HealthDataPageState extends State<HealthDataPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.surfaceTertiary,
+      backgroundColor: AppTheme.surfaceContainer,
       appBar:
           _user != null
               ? AppBar(
@@ -165,10 +258,83 @@ class _HealthDataPageState extends State<HealthDataPage> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                backgroundColor: AppTheme.primaryBlue,
+                backgroundColor: AppTheme.primaryMedical,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 actions: [
+                  // Auto-refresh indicator
+                  if (_lastFetchTime != null)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            _isAutoRefreshing
+                                ? Colors.orange.withValues(alpha: 0.2)
+                                : Colors.green.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusS),
+                        border: Border.all(
+                          color:
+                              _isAutoRefreshing
+                                  ? Colors.orange.withValues(alpha: 0.5)
+                                  : Colors.green.withValues(alpha: 0.5),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _isAutoRefreshing
+                              ? SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 1.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.orange.shade300,
+                                  ),
+                                ),
+                              )
+                              : Icon(
+                                Icons.sync,
+                                color: Colors.green.shade300,
+                                size: 12,
+                              ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _getAutoRefreshStatus(),
+                            style: AppTheme.labelSmall.copyWith(
+                              color:
+                                  _isAutoRefreshing
+                                      ? Colors.orange.shade300
+                                      : _autoRefreshFailures > 0
+                                      ? Colors.red.shade300
+                                      : Colors.green.shade300,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  // Manual refresh button
+                  IconButton(
+                    onPressed:
+                        _isLoading
+                            ? null
+                            : () => _fetchComprehensiveHealthData(),
+                    icon: Icon(
+                      Icons.refresh_rounded,
+                      color: Colors.white.withValues(
+                        alpha: _isLoading ? 0.5 : 1.0,
+                      ),
+                      size: 20,
+                    ),
+                    tooltip: 'Refresh Now',
+                  ),
                   Container(
                     margin: const EdgeInsets.only(right: 16),
                     padding: const EdgeInsets.symmetric(
@@ -181,7 +347,7 @@ class _HealthDataPageState extends State<HealthDataPage> {
                     ),
                     child: DropdownButton<int>(
                       value: _selectedDays,
-                      dropdownColor: AppTheme.primaryBlue,
+                      dropdownColor: AppTheme.primaryMedical,
                       style: AppTheme.bodyMedium.copyWith(color: Colors.white),
                       underline: Container(),
                       icon: Icon(
@@ -236,7 +402,7 @@ class _HealthDataPageState extends State<HealthDataPage> {
 
   Widget _buildSignInScreen() {
     return Container(
-      decoration: BoxDecoration(gradient: AppTheme.primaryGradient),
+      decoration: BoxDecoration(gradient: AppTheme.primaryHealthGradient),
       child: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingXL),
@@ -287,17 +453,20 @@ class _HealthDataPageState extends State<HealthDataPage> {
                 constraints: const BoxConstraints(maxWidth: 280),
                 child: ElevatedButton.icon(
                   onPressed: _isLoading ? null : _handleSignIn,
-                  icon: Icon(Icons.login_rounded, color: AppTheme.primaryBlue),
+                  icon: Icon(
+                    Icons.login_rounded,
+                    color: AppTheme.primaryMedical,
+                  ),
                   label: Text(
                     'Sign in with Google',
                     style: AppTheme.bodyLarge.copyWith(
-                      color: AppTheme.primaryBlue,
+                      color: AppTheme.primaryMedical,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: AppTheme.primaryBlue,
+                    foregroundColor: AppTheme.primaryMedical,
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppTheme.spacingXL,
                       vertical: AppTheme.spacingM,
@@ -318,10 +487,10 @@ class _HealthDataPageState extends State<HealthDataPage> {
                     horizontal: AppTheme.spacingL,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentRed.withValues(alpha: 0.1),
+                    color: AppTheme.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radiusM),
                     border: Border.all(
-                      color: AppTheme.accentRed.withValues(alpha: 0.3),
+                      color: AppTheme.error.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Text(
@@ -420,6 +589,11 @@ class _HealthDataPageState extends State<HealthDataPage> {
             metricsCount: _timeSeriesData.length,
             onRefresh: _fetchComprehensiveHealthData,
           ),
+          const SizedBox(height: AppTheme.spacingM),
+          SmartwatchStatsCard(
+            timeSeriesData: _timeSeriesData,
+            summaryData: _summaryData,
+          ),
           const SizedBox(height: AppTheme.spacingXL),
           _buildMetricCategories(),
         ],
@@ -455,7 +629,7 @@ class _HealthDataPageState extends State<HealthDataPage> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.9,
+        childAspectRatio: 0.75,
         crossAxisSpacing: AppTheme.spacingM,
         mainAxisSpacing: AppTheme.spacingM,
       ),
@@ -479,11 +653,5 @@ class _HealthDataPageState extends State<HealthDataPage> {
         );
       },
     );
-  }
-
-  @override
-  void dispose() {
-    _healthDataService.googleSignIn.signOut();
-    super.dispose();
   }
 }
