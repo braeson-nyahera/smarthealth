@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "SmartHealth Web (Fixed Port)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "chrome",
+            "args": [
+                "--web-port=3000"
+            ],
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "SmartHealth Mobile",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "SmartHealth Web (Debug)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "chrome",
+            "args": [
+                "--web-port=3000",
+                "--debug"
+            ],
+            "program": "lib/main.dart"
+        }
+    ]
+}

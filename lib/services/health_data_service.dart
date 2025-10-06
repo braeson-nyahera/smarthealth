@@ -3,13 +3,18 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../models/health_models.dart';
 import '../constants/health_metrics.dart';
 import '../utils/health_utils.dart';
+import '../config/google_config.dart';
 import 'google_fit_service.dart';
 
 class HealthDataService {
   late GoogleSignIn _googleSignIn;
 
   HealthDataService() {
-    _googleSignIn = GoogleSignIn(scopes: HealthMetrics.googleFitScopes);
+    _googleSignIn = GoogleSignIn(
+      scopes: HealthMetrics.googleFitScopes,
+      // Add web-specific configuration
+      clientId: kIsWeb ? GoogleConfig.webClientId : null,
+    );
   }
 
   GoogleSignIn get googleSignIn => _googleSignIn;
@@ -34,49 +39,78 @@ class HealthDataService {
       Map<String, List<HealthDataPoint>> newTimeSeriesData = {};
       Map<String, HealthSummary> newSummaryData = {};
 
-      // Fetch data for each metric category
-      await _fetchActivityData(
-        accessToken,
-        startTime,
-        endTime,
-        newTimeSeriesData,
-        newSummaryData,
-      );
-      await _fetchHeartRateData(
-        accessToken,
-        startTime,
-        endTime,
-        newTimeSeriesData,
-        newSummaryData,
-      );
-      await _fetchSleepData(
-        accessToken,
-        startTime,
-        endTime,
-        newTimeSeriesData,
-        newSummaryData,
-      );
-      await _fetchVitalSigns(
-        accessToken,
-        startTime,
-        endTime,
-        newTimeSeriesData,
-        newSummaryData,
-      );
-      await _fetchWellnessData(
-        accessToken,
-        startTime,
-        endTime,
-        newTimeSeriesData,
-        newSummaryData,
-      );
-      await _fetchEnhancedSmartwatchData(
-        accessToken,
-        startTime,
-        endTime,
-        newTimeSeriesData,
-        newSummaryData,
-      );
+      // Fetch data for each metric category with individual error handling
+      try {
+        await _fetchActivityData(
+          accessToken,
+          startTime,
+          endTime,
+          newTimeSeriesData,
+          newSummaryData,
+        );
+      } catch (e) {
+        debugPrint('Error fetching activity data: $e');
+      }
+
+      try {
+        await _fetchHeartRateData(
+          accessToken,
+          startTime,
+          endTime,
+          newTimeSeriesData,
+          newSummaryData,
+        );
+      } catch (e) {
+        debugPrint('Error fetching heart rate data: $e');
+      }
+
+      try {
+        await _fetchSleepData(
+          accessToken,
+          startTime,
+          endTime,
+          newTimeSeriesData,
+          newSummaryData,
+        );
+      } catch (e) {
+        debugPrint('Error fetching sleep data: $e');
+      }
+
+      try {
+        await _fetchVitalSigns(
+          accessToken,
+          startTime,
+          endTime,
+          newTimeSeriesData,
+          newSummaryData,
+        );
+      } catch (e) {
+        debugPrint('Error fetching vital signs: $e');
+      }
+
+      try {
+        await _fetchWellnessData(
+          accessToken,
+          startTime,
+          endTime,
+          newTimeSeriesData,
+          newSummaryData,
+        );
+      } catch (e) {
+        debugPrint('Error fetching wellness data: $e');
+      }
+
+      try {
+        await _fetchEnhancedSmartwatchData(
+          accessToken,
+          startTime,
+          endTime,
+          newTimeSeriesData,
+          newSummaryData,
+        );
+      } catch (e) {
+        debugPrint('Error fetching smartwatch data: $e');
+      }
 
       return {
         'timeSeriesData': newTimeSeriesData,

@@ -183,7 +183,7 @@ class _MetricCardState extends State<MetricCard>
             ),
           ),
           if (widget.timeSeries.isNotEmpty)
-            Container(width: 40, height: 24, child: _buildSparkline()),
+            SizedBox(width: 40, height: 24, child: _buildSparkline()),
         ],
       ),
     );

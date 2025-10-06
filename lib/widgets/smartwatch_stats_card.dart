@@ -164,11 +164,11 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: constraints.maxWidth > 500 ? 2 : 1,
             crossAxisSpacing: AppTheme.spacingM,
             mainAxisSpacing: AppTheme.spacingM,
-            childAspectRatio: 1.2, // Reduced from 1.4 to prevent overflow
+            childAspectRatio: constraints.maxWidth > 500 ? 1.3 : 2.5,
           ),
           itemCount: stats.length,
           itemBuilder: (context, index) {
@@ -212,7 +212,8 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
             ],
           ),
           const SizedBox(height: AppTheme.spacingXS),
-          Flexible(
+          Expanded(
+            flex: 2,
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
@@ -227,14 +228,18 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
               ),
             ),
           ),
-          Text(
-            stat['label'] as String,
-            style: AppTheme.bodySmall.copyWith(
-              color: AppTheme.textSecondaryDark,
-              fontSize: 11,
+          const SizedBox(height: AppTheme.spacingXS),
+          Flexible(
+            child: Text(
+              stat['label'] as String,
+              style: AppTheme.bodySmall.copyWith(
+                color: AppTheme.textSecondaryDark,
+                fontSize: 11,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+              textAlign: TextAlign.start,
             ),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
           ),
         ],
       ),
@@ -269,7 +274,7 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
                   ),
                 ),
                 Text(
-                  'Tracking \$totalDataPoints data points from your smartwatch',
+                  'Tracking $totalDataPoints data points from your smartwatch',
                   style: AppTheme.bodySmall.copyWith(
                     color: Colors.white.withValues(alpha: 0.9),
                   ),

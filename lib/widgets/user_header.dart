@@ -7,6 +7,7 @@ class UserHeader extends StatefulWidget {
   final int selectedDays;
   final int metricsCount;
   final VoidCallback onRefresh;
+  final VoidCallback? onProfileTap;
 
   const UserHeader({
     super.key,
@@ -14,6 +15,7 @@ class UserHeader extends StatefulWidget {
     required this.selectedDays,
     required this.metricsCount,
     required this.onRefresh,
+    this.onProfileTap,
   });
 
   @override
@@ -154,6 +156,10 @@ class _UserHeaderState extends State<UserHeader>
             _buildAvatar(),
             const SizedBox(width: AppTheme.spacingL),
             Expanded(child: _buildUserInfo()),
+            if (widget.onProfileTap != null) ...[
+              _buildProfileButton(),
+              const SizedBox(width: AppTheme.spacingS),
+            ],
             _buildRefreshButton(),
           ],
         );
@@ -184,19 +190,37 @@ class _UserHeaderState extends State<UserHeader>
       ),
       child: CircleAvatar(
         radius: 36,
-        backgroundImage:
-            widget.user.photoUrl != null
-                ? NetworkImage(widget.user.photoUrl!)
-                : null,
         backgroundColor: Colors.white.withValues(alpha: 0.2),
         child:
-            widget.user.photoUrl == null
-                ? Icon(
+            widget.user.photoUrl != null
+                ? ClipOval(
+                  child: Image.network(
+                    widget.user.photoUrl!,
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        Icons.person_rounded,
+                        size: 32,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Icon(
+                        Icons.person_rounded,
+                        size: 32,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      );
+                    },
+                  ),
+                )
+                : Icon(
                   Icons.person_rounded,
                   size: 32,
                   color: Colors.white.withValues(alpha: 0.9),
-                )
-                : null,
+                ),
       ),
     );
   }
@@ -279,6 +303,35 @@ class _UserHeaderState extends State<UserHeader>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProfileButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(AppTheme.radiusL),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppTheme.radiusL),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.radiusL),
+          onTap: widget.onProfileTap,
+          child: Container(
+            padding: const EdgeInsets.all(AppTheme.spacingM),
+            child: Icon(
+              Icons.person_outline_rounded,
+              color: Colors.white.withValues(alpha: 0.9),
+              size: 22,
+            ),
+          ),
+        ),
       ),
     );
   }

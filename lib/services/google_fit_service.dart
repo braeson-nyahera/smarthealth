@@ -35,6 +35,25 @@ class GoogleFitService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return _parseTimeSeriesData(data, metric);
+      } else if (response.statusCode == 400) {
+        // Handle missing data sources gracefully
+        final errorData = jsonDecode(response.body);
+        if (errorData['error']?['message']?.contains(
+              'no default datasource found',
+            ) ==
+            true) {
+          // This is expected for some metrics that aren't available on all devices
+          if (kDebugMode) {
+            debugPrint(
+              'Data source not available for $debugName: ${metric.dataType}',
+            );
+          }
+        } else {
+          debugPrint(
+            'Error response for $debugName: ${response.statusCode} - ${response.body}',
+          );
+        }
+        return [];
       } else {
         debugPrint(
           'Error response for $debugName: ${response.statusCode} - ${response.body}',
@@ -232,7 +251,12 @@ class GoogleFitService {
         // Daily max HR
         double dailyMaxHR = points.last.value;
 
-        DateTime dayStart = DateTime.parse('$day 00:00:00');
+        // Parse the day string more safely
+        final dayParts = day.split('-');
+        final year = int.parse(dayParts[0]);
+        final month = int.parse(dayParts[1]);
+        final dayOfMonth = int.parse(dayParts[2]);
+        DateTime dayStart = DateTime(year, month, dayOfMonth);
 
         restingHRPoints.add(
           HealthDataPoint(timestamp: dayStart, value: dailyRestingHR),
@@ -722,14 +746,24 @@ class GoogleFitService {
 
           // Convert to daily aggregates
           dailySessions.forEach((day, sessions) {
-            DateTime date = DateTime.parse('$day 00:00:00');
+            // Parse the day string more safely
+            final dayParts = day.split('-');
+            final year = int.parse(dayParts[0]);
+            final month = int.parse(dayParts[1]);
+            final dayOfMonth = int.parse(dayParts[2]);
+            DateTime date = DateTime(year, month, dayOfMonth);
             sessionPoints.add(
               HealthDataPoint(timestamp: date, value: sessions.toDouble()),
             );
           });
 
           dailyDuration.forEach((day, duration) {
-            DateTime date = DateTime.parse('$day 00:00:00');
+            // Parse the day string more safely
+            final dayParts = day.split('-');
+            final year = int.parse(dayParts[0]);
+            final month = int.parse(dayParts[1]);
+            final dayOfMonth = int.parse(dayParts[2]);
+            DateTime date = DateTime(year, month, dayOfMonth);
             durationPoints.add(
               HealthDataPoint(timestamp: date, value: duration),
             );
