@@ -42,12 +42,14 @@ class _HealthDataPageState extends State<HealthDataPage> {
   void initState() {
     super.initState();
     _startAutoRefresh();
+    _checkExistingSession();
   }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
-    _healthDataService.googleSignIn.signOut();
+    // Don't automatically sign out on dispose - let user stay signed in
+    // Only sign out when they explicitly choose to do so
     super.dispose();
   }
 
@@ -65,6 +67,46 @@ class _HealthDataPageState extends State<HealthDataPage> {
     }
 
     return '2min';
+  }
+
+  Future<void> _checkExistingSession() async {
+    try {
+      // Don't auto-login if user manually signed out
+      final wasManuallySignedOut =
+          await UserProfileService.wasManuallySignedOut();
+      if (wasManuallySignedOut) {
+        debugPrint('Skipping auto-login due to manual sign-out');
+        return;
+      }
+
+      // Check if user has a saved session
+      final hasSession = await UserProfileService.hasUserSession();
+      if (!hasSession) return;
+
+      // Try to sign in silently with Google
+      final account = await _healthDataService.googleSignIn.signInSilently();
+      if (account != null) {
+        setState(() {
+          _user = account;
+          _debugMessage = 'Welcome back, ${account.displayName ?? 'User'}!';
+        });
+
+        // Check profile setup status
+        await _checkProfileSetupStatus();
+
+        // Fetch health data if profile is complete
+        if (!_showProfileSetup) {
+          await _fetchComprehensiveHealthData();
+        }
+      } else {
+        // Silent sign-in failed, clear invalid session
+        await UserProfileService.clearProfile();
+      }
+    } catch (error) {
+      debugPrint('Auto-login failed: $error');
+      // Clear invalid session
+      await UserProfileService.clearProfile();
+    }
   }
 
   void _startAutoRefresh() {
@@ -107,9 +149,15 @@ class _HealthDataPageState extends State<HealthDataPage> {
       }
       setState(() => _user = account);
 
+      // Save user session for auto-login
+      await UserProfileService.saveUserSession(
+        email: account.email,
+        displayName: account.displayName ?? 'User',
+        photoUrl: account.photoUrl,
+      );
+
       // Check if user needs to complete profile setup
       await _checkProfileSetupStatus();
-
       if (!_showProfileSetup) {
         await _fetchComprehensiveHealthData();
       }
@@ -184,9 +232,39 @@ class _HealthDataPageState extends State<HealthDataPage> {
                   _userProfile = updatedProfile;
                 });
               },
+              onSignOut: () async {
+                // Handle sign out from profile page
+                try {
+                  // Ensure Google sign-out is complete
+                  await _healthDataService.googleSignIn.signOut();
+                  await _healthDataService.googleSignIn.disconnect();
+                } catch (e) {
+                  debugPrint('Error during Google sign-out: $e');
+                }
+
+                setState(() {
+                  _user = null;
+                  _timeSeriesData = {};
+                  _summaryData = {};
+                  _showProfileSetup = false;
+                  _userProfile = null;
+                  _debugMessage = 'Signed out successfully';
+                });
+              },
             ),
       ),
     );
+
+    // Check if user was signed out and refresh state if needed
+    if (_user == null) {
+      final hasSession = await UserProfileService.hasUserSession();
+      if (!hasSession) {
+        // User was signed out, refresh the page state
+        setState(() {
+          _debugMessage = 'Please sign in to continue';
+        });
+      }
+    }
   }
 
   Future<void> _fetchComprehensiveHealthData({

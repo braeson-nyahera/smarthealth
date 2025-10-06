@@ -9,12 +9,14 @@ class ProfilePage extends StatefulWidget {
   final GoogleSignInAccount user;
   final UserProfile? existingProfile;
   final VoidCallback? onProfileUpdated;
+  final VoidCallback? onSignOut;
 
   const ProfilePage({
     super.key,
     required this.user,
     this.existingProfile,
     this.onProfileUpdated,
+    this.onSignOut,
   });
 
   @override
@@ -154,6 +156,27 @@ class _ProfilePageState extends State<ProfilePage>
               icon: const Icon(Icons.edit_rounded),
               onPressed: () => setState(() => _isEditing = true),
             ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert_rounded),
+            onSelected: (value) {
+              if (value == 'signout') {
+                _handleSignOut();
+              }
+            },
+            itemBuilder:
+                (context) => [
+                  const PopupMenuItem(
+                    value: 'signout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout_rounded, size: 20),
+                        SizedBox(width: 8),
+                        Text('Sign Out'),
+                      ],
+                    ),
+                  ),
+                ],
+          ),
         ],
       ),
       body: FadeTransition(
@@ -574,6 +597,83 @@ class _ProfilePageState extends State<ProfilePage>
         ),
       ],
     );
+  }
+
+  Future<void> _handleSignOut() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Sign Out'),
+            content: const Text(
+              'Are you sure you want to sign out? You will need to sign in again to access your health data.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.error,
+                ),
+                child: const Text(
+                  'Sign Out',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed == true) {
+      try {
+        // Import GoogleSignIn to sign out properly
+        final googleSignIn = GoogleSignIn(
+          scopes: [
+            'email',
+            'profile',
+            'https://www.googleapis.com/auth/fitness.activity.read',
+            'https://www.googleapis.com/auth/fitness.body.read',
+            'https://www.googleapis.com/auth/fitness.heart_rate.read',
+            'https://www.googleapis.com/auth/fitness.location.read',
+            'https://www.googleapis.com/auth/fitness.nutrition.read',
+            'https://www.googleapis.com/auth/fitness.sleep.read',
+            'https://www.googleapis.com/auth/fitness.blood_pressure.read',
+            'https://www.googleapis.com/auth/fitness.blood_glucose.read',
+            'https://www.googleapis.com/auth/fitness.body_temperature.read',
+            'https://www.googleapis.com/auth/fitness.oxygen_saturation.read',
+            'https://www.googleapis.com/auth/fitness.reproductive_health.read',
+          ],
+        );
+
+        // Sign out from Google completely
+        await googleSignIn.signOut();
+        await googleSignIn.disconnect(); // This ensures complete disconnection
+
+        // Clear stored profile and session data
+        await UserProfileService.clearProfile();
+
+        if (mounted) {
+          // Call the sign out callback to notify parent page
+          widget.onSignOut?.call();
+
+          // Navigate back to main page
+          Navigator.of(context).pop();
+        }
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error signing out: $error'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
+    }
   }
 
   String _getDiabetesDisplayText(DiabetesState state) {

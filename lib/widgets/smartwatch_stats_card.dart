@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import '../models/health_models.dart';
 import '../constants/app_theme.dart';
+import '../screens/health_insights_page.dart';
 
 class SmartwatchStatsCard extends StatefulWidget {
+  final dynamic user;
   final Map<String, List<HealthDataPoint>> timeSeriesData;
   final Map<String, HealthSummary> summaryData;
+  final int selectedDays;
 
   const SmartwatchStatsCard({
     super.key,
+    required this.user,
     required this.timeSeriesData,
     required this.summaryData,
+    required this.selectedDays,
   });
 
   @override
@@ -103,53 +108,63 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
           ),
         ),
         const SizedBox(width: AppTheme.spacingM),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'SmartWatch Analytics',
-              style: AppTheme.headingSmall.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              'Real-time health metrics',
-              style: AppTheme.bodySmall.copyWith(
-                color: AppTheme.textSecondaryDark,
-              ),
-            ),
-          ],
-        ),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppTheme.spacingS,
-            vertical: AppTheme.spacingXS,
-          ),
-          decoration: BoxDecoration(
-            color: AppTheme.success.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(AppTheme.radiusM),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: AppTheme.success,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: AppTheme.spacingXS),
               Text(
-                'Connected',
-                style: AppTheme.bodySmall.copyWith(
-                  color: AppTheme.success,
-                  fontWeight: FontWeight.w500,
+                'SmartWatch Analytics',
+                style: AppTheme.headingSmall.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                'Real-time health metrics',
+                style: AppTheme.bodySmall.copyWith(
+                  color: AppTheme.textSecondaryDark,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ],
+          ),
+        ),
+        const SizedBox(width: AppTheme.spacingXS),
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spacingS,
+              vertical: AppTheme.spacingXS,
+            ),
+            decoration: BoxDecoration(
+              color: AppTheme.success.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppTheme.radiusM),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: AppTheme.success,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    'Connected',
+                    style: AppTheme.bodySmall.copyWith(
+                      color: AppTheme.success,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 10,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -252,48 +267,60 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
       (sum, list) => sum + list.length,
     );
 
-    return Container(
-      padding: const EdgeInsets.all(AppTheme.spacingM),
-      decoration: BoxDecoration(
-        gradient: AppTheme.primaryHealthGradient,
-        borderRadius: BorderRadius.circular(AppTheme.radiusM),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.insights_rounded, color: Colors.white, size: 24),
-          const SizedBox(width: AppTheme.spacingM),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Health Insights',
+          style: AppTheme.bodyLarge.copyWith(
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimaryDark,
+          ),
+        ),
+        const SizedBox(height: AppTheme.spacingS),
+        Text(
+          '$totalDataPoints data points from smartwatch',
+          style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondaryDark),
+        ),
+        const SizedBox(height: AppTheme.spacingM),
+        GestureDetector(
+          onTap: _navigateToHealthInsights,
+          child: Container(
+            padding: const EdgeInsets.all(AppTheme.spacingM),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryMedical.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(AppTheme.radiusM),
+              border: Border.all(
+                color: AppTheme.primaryMedical.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
               children: [
-                Text(
-                  'Health Insights',
-                  style: AppTheme.bodyLarge.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+                Icon(
+                  Icons.analytics_rounded,
+                  color: AppTheme.primaryMedical,
+                  size: 20,
+                ),
+                const SizedBox(width: AppTheme.spacingS),
+                Expanded(
+                  child: Text(
+                    'View detailed health analysis',
+                    style: AppTheme.bodyMedium.copyWith(
+                      color: AppTheme.primaryMedical,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-                Text(
-                  'Tracking $totalDataPoints data points from your smartwatch',
-                  style: AppTheme.bodySmall.copyWith(
-                    color: Colors.white.withValues(alpha: 0.9),
-                  ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: AppTheme.primaryMedical,
+                  size: 16,
                 ),
               ],
             ),
           ),
-          IconButton(
-            onPressed: () {
-              // TODO: Navigate to detailed insights
-            },
-            icon: Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white,
-              size: 16,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -306,9 +333,18 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
       stats.add({
         'icon': Icons.favorite_rounded,
         'color': AppTheme.heartRate,
-        'value': '\${heartRate.average.toInt()} bpm',
+        'value': '${heartRate.average.toInt()} bpm',
         'label': 'Avg Heart Rate',
         'trend': heartRate.trend,
+      });
+    } else {
+      // Show placeholder when heart rate data is not available
+      stats.add({
+        'icon': Icons.favorite_border,
+        'color': AppTheme.textSecondaryDark,
+        'value': '--',
+        'label': 'Heart Rate (No Data)',
+        'trend': null,
       });
     }
 
@@ -318,9 +354,17 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
       stats.add({
         'icon': Icons.directions_walk_rounded,
         'color': AppTheme.activity,
-        'value': '\${(steps.total / 1000).toStringAsFixed(1)}K',
+        'value': '${(steps.latest / 1000).toStringAsFixed(1)}K',
         'label': 'Daily Steps',
         'trend': steps.trend,
+      });
+    } else {
+      stats.add({
+        'icon': Icons.directions_walk_outlined,
+        'color': AppTheme.textSecondaryDark,
+        'value': '--',
+        'label': 'Steps (No Data)',
+        'trend': null,
       });
     }
 
@@ -330,9 +374,17 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
       stats.add({
         'icon': Icons.bedtime_rounded,
         'color': AppTheme.sleep,
-        'value': '\${sleep.average.toStringAsFixed(1)}h',
+        'value': '${sleep.average.toStringAsFixed(1)}h',
         'label': 'Avg Sleep',
         'trend': sleep.trend,
+      });
+    } else {
+      stats.add({
+        'icon': Icons.bedtime_outlined,
+        'color': AppTheme.textSecondaryDark,
+        'value': '--',
+        'label': 'Sleep (No Data)',
+        'trend': null,
       });
     }
 
@@ -342,12 +394,34 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
       stats.add({
         'icon': Icons.local_fire_department_rounded,
         'color': AppTheme.vitals,
-        'value': '\${energy.total.toInt()} cal',
+        'value': '${energy.latest.toInt()} cal',
         'label': 'Active Energy',
         'trend': energy.trend,
+      });
+    } else {
+      stats.add({
+        'icon': Icons.local_fire_department_outlined,
+        'color': AppTheme.textSecondaryDark,
+        'value': '--',
+        'label': 'Energy (No Data)',
+        'trend': null,
       });
     }
 
     return stats.take(4).toList(); // Show max 4 stats in 2x2 grid
+  }
+
+  void _navigateToHealthInsights() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => HealthInsightsPage(
+              user: widget.user,
+              timeSeriesData: widget.timeSeriesData,
+              summaryData: widget.summaryData,
+              selectedDays: widget.selectedDays,
+            ),
+      ),
+    );
   }
 }

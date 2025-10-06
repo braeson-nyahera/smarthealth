@@ -304,7 +304,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppTheme.spacingL),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,7 +367,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppTheme.spacingL),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,7 +464,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppTheme.spacingL),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -559,7 +559,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppTheme.spacingL),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

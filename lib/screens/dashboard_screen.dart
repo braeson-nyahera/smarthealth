@@ -44,8 +44,10 @@ class DashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: AppTheme.spacingM),
           SmartwatchStatsCard(
+            user: user,
             timeSeriesData: timeSeriesData,
             summaryData: summaryData,
+            selectedDays: selectedDays,
           ),
           const SizedBox(height: AppTheme.spacingXL),
           _buildMetricCategories(),

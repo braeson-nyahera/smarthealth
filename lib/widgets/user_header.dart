@@ -144,7 +144,16 @@ class _UserHeaderState extends State<UserHeader>
         if (isCompact) {
           return Column(
             children: [
-              _buildUserInfo(),
+              Row(
+                children: [
+                  Expanded(child: _buildUserInfo()),
+                  if (widget.onProfileTap != null) ...[
+                    _buildProfileButton(),
+                    const SizedBox(width: AppTheme.spacingS),
+                  ],
+                  _buildRefreshButton(),
+                ],
+              ),
               const SizedBox(height: AppTheme.spacingM),
               _buildStats(),
             ],
@@ -250,8 +259,6 @@ class _UserHeaderState extends State<UserHeader>
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: AppTheme.spacingS),
-        _buildStats(),
       ],
     );
   }
