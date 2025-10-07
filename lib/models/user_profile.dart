@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum DiabetesState { none, prediabetes, type1, type2 }
+enum DiabetesState { none, diabetic }
 
 class UserProfile {
   final int? age;
@@ -61,13 +61,9 @@ class UserProfile {
   String get diabetesStateDisplay {
     switch (diabetesState) {
       case DiabetesState.none:
-        return 'No diabetes';
-      case DiabetesState.prediabetes:
-        return 'Pre-diabetes';
-      case DiabetesState.type1:
-        return 'Type 1 diabetes';
-      case DiabetesState.type2:
-        return 'Type 2 diabetes';
+        return 'Not diabetic';
+      case DiabetesState.diabetic:
+        return 'Diabetic';
     }
   }
 
@@ -76,10 +72,7 @@ class UserProfile {
     switch (diabetesState) {
       case DiabetesState.none:
         return Colors.green;
-      case DiabetesState.prediabetes:
-        return Colors.orange;
-      case DiabetesState.type1:
-      case DiabetesState.type2:
+      case DiabetesState.diabetic:
         return Colors.red;
     }
   }

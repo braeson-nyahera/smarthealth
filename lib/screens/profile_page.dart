@@ -679,13 +679,9 @@ class _ProfilePageState extends State<ProfilePage>
   String _getDiabetesDisplayText(DiabetesState state) {
     switch (state) {
       case DiabetesState.none:
-        return 'No Diabetes';
-      case DiabetesState.type1:
-        return 'Type 1 Diabetes';
-      case DiabetesState.type2:
-        return 'Type 2 Diabetes';
-      case DiabetesState.prediabetes:
-        return 'Pre-diabetes';
+        return 'Not Diabetic';
+      case DiabetesState.diabetic:
+        return 'Diabetic';
     }
   }
 }

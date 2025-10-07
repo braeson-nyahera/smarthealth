@@ -6,7 +6,6 @@
 library;
 
 class GoogleConfig {
-  // TODO: Replace with your actual Web Client ID from Google Cloud Console
   // Get this from: https://console.cloud.google.com/apis/credentials
   static const String webClientId =
       '816258150287-5j8pltavpk9msl9q3h1gcovvtc45u5vl.apps.googleusercontent.com';

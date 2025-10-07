@@ -283,40 +283,55 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
           style: AppTheme.bodySmall.copyWith(color: AppTheme.textSecondaryDark),
         ),
         const SizedBox(height: AppTheme.spacingM),
-        GestureDetector(
-          onTap: _navigateToHealthInsights,
-          child: Container(
-            padding: const EdgeInsets.all(AppTheme.spacingM),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryMedical.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppTheme.radiusM),
-              border: Border.all(
-                color: AppTheme.primaryMedical.withOpacity(0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.analytics_rounded,
-                  color: AppTheme.primaryMedical,
-                  size: 20,
-                ),
-                const SizedBox(width: AppTheme.spacingS),
-                Expanded(
-                  child: Text(
-                    'View detailed health analysis',
-                    style: AppTheme.bodyMedium.copyWith(
-                      color: AppTheme.primaryMedical,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: AppTheme.primaryMedical,
-                  size: 16,
-                ),
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppTheme.primaryMedical,
+                AppTheme.primaryMedical.withValues(alpha: 0.9),
               ],
+            ),
+            borderRadius: BorderRadius.circular(AppTheme.radiusL),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primaryMedical.withValues(alpha: 0.3),
+                offset: const Offset(0, 4),
+                blurRadius: 12,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(AppTheme.radiusL),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppTheme.radiusL),
+              onTap: _navigateToHealthInsights,
+              child: Container(
+                padding: const EdgeInsets.all(AppTheme.spacingM),
+                child: Row(
+                  children: [
+                    Icon(Icons.insights_rounded, color: Colors.white, size: 24),
+                    const SizedBox(width: AppTheme.spacingM),
+                    Expanded(
+                      child: Text(
+                        'View detailed smartwatch insights',
+                        style: AppTheme.bodyLarge.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -364,46 +379,6 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
         'color': AppTheme.textSecondaryDark,
         'value': '--',
         'label': 'Steps (No Data)',
-        'trend': null,
-      });
-    }
-
-    // Sleep
-    if (widget.summaryData.containsKey('sleep_hours')) {
-      final sleep = widget.summaryData['sleep_hours']!;
-      stats.add({
-        'icon': Icons.bedtime_rounded,
-        'color': AppTheme.sleep,
-        'value': '${sleep.average.toStringAsFixed(1)}h',
-        'label': 'Avg Sleep',
-        'trend': sleep.trend,
-      });
-    } else {
-      stats.add({
-        'icon': Icons.bedtime_outlined,
-        'color': AppTheme.textSecondaryDark,
-        'value': '--',
-        'label': 'Sleep (No Data)',
-        'trend': null,
-      });
-    }
-
-    // Active Energy
-    if (widget.summaryData.containsKey('active_energy')) {
-      final energy = widget.summaryData['active_energy']!;
-      stats.add({
-        'icon': Icons.local_fire_department_rounded,
-        'color': AppTheme.vitals,
-        'value': '${energy.latest.toInt()} cal',
-        'label': 'Active Energy',
-        'trend': energy.trend,
-      });
-    } else {
-      stats.add({
-        'icon': Icons.local_fire_department_outlined,
-        'color': AppTheme.textSecondaryDark,
-        'value': '--',
-        'label': 'Energy (No Data)',
         'trend': null,
       });
     }
