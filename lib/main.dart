@@ -1,9 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'pages/health_data_page.dart';
 import 'constants/app_theme.dart';
+import 'utils/error_handler.dart';
 
-void main() {
-  runApp(SmartHealthApp());
+void main() async {
+  // Ensure Flutter bindings are initialized
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Setup global error handling
+  setupErrorHandling();
+
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  runApp(const SmartHealthApp());
 }
 
 class SmartHealthApp extends StatelessWidget {
@@ -12,10 +26,26 @@ class SmartHealthApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SmartHealth - Complete Biometric Data',
+      title: 'SmartHealth',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: HealthDataPage(),
+      home: const HealthDataPage(),
+      // Add error handling for the entire app
+      builder: (context, widget) {
+        // Handle text scaling
+        final mediaQueryData = MediaQuery.of(context);
+        final constrainedTextScaleFactor = mediaQueryData.textScaleFactor.clamp(
+          0.8,
+          1.2,
+        );
+
+        return MediaQuery(
+          data: mediaQueryData.copyWith(
+            textScaler: TextScaler.linear(constrainedTextScaleFactor),
+          ),
+          child: widget!,
+        );
+      },
     );
   }
 }

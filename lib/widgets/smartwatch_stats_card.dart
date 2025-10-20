@@ -180,10 +180,20 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: constraints.maxWidth > 500 ? 2 : 1,
+            crossAxisCount:
+                constraints.maxWidth > 600
+                    ? 3
+                    : constraints.maxWidth > 400
+                    ? 2
+                    : 1,
             crossAxisSpacing: AppTheme.spacingM,
             mainAxisSpacing: AppTheme.spacingM,
-            childAspectRatio: constraints.maxWidth > 500 ? 1.3 : 2.5,
+            childAspectRatio:
+                constraints.maxWidth > 600
+                    ? 1.2
+                    : constraints.maxWidth > 400
+                    ? 1.3
+                    : 2.5,
           ),
           itemCount: stats.length,
           itemBuilder: (context, index) {
@@ -383,7 +393,47 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
       });
     }
 
-    return stats.take(4).toList(); // Show max 4 stats in 2x2 grid
+    // Calories
+    if (widget.summaryData.containsKey('calories')) {
+      final calories = widget.summaryData['calories']!;
+      stats.add({
+        'icon': Icons.local_fire_department_rounded,
+        'color': Colors.orange,
+        'value': '${calories.latest.toInt()} cal',
+        'label': 'Calories Burned',
+        'trend': calories.trend,
+      });
+    } else {
+      stats.add({
+        'icon': Icons.local_fire_department_outlined,
+        'color': AppTheme.textSecondaryDark,
+        'value': '--',
+        'label': 'Calories (No Data)',
+        'trend': null,
+      });
+    }
+
+    // Blood Pressure
+    if (widget.summaryData.containsKey('blood_pressure')) {
+      final bp = widget.summaryData['blood_pressure']!;
+      stats.add({
+        'icon': Icons.bloodtype_rounded,
+        'color': Colors.red.shade600,
+        'value': '${bp.latest.toInt()} mmHg',
+        'label': 'Blood Pressure',
+        'trend': bp.trend,
+      });
+    } else {
+      stats.add({
+        'icon': Icons.bloodtype_outlined,
+        'color': AppTheme.textSecondaryDark,
+        'value': '--',
+        'label': 'Blood Pressure (No Data)',
+        'trend': null,
+      });
+    }
+
+    return stats.take(6).toList(); // Show max 6 stats in 2x3 grid
   }
 
   void _navigateToHealthInsights() {

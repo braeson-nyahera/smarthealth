@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+HYPERTENSION_PREDICTION_GUIDE.md
+PREDICTION_SCHEDULER_SUMMARY.md

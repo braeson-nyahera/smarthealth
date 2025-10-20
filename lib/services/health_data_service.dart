@@ -1,16 +1,19 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import '../models/health_models.dart';
 import '../constants/health_metrics.dart';
 import '../utils/health_utils.dart';
 import '../config/google_config.dart';
+import '../config/api_config.dart';
 import 'google_fit_service.dart';
+import 'rdfit_service.dart';
+import 'health_connect_service.dart';
 
 class HealthDataService {
   late GoogleSignIn _googleSignIn;
+  final HealthConnectService _healthConnectService = HealthConnectService();
 
   HealthDataService() {
     _googleSignIn = GoogleSignIn(
@@ -151,6 +154,7 @@ class HealthDataService {
         final importantDataTypes = [
           'heart_rate',
           'oxygen_saturation',
+          'blood_pressure',
           'sleep_hours',
           'calories',
         ];
@@ -165,6 +169,16 @@ class HealthDataService {
         }
 
         // Provide guidance only for potentially available data types
+        if ((newTimeSeriesData['blood_pressure'] ?? []).isEmpty) {
+          debugPrint('\n💡 BLOOD PRESSURE DATA GUIDANCE:');
+          debugPrint('  🩺 Blood pressure may need configuration:');
+          debugPrint('     • Check if your smartwatch supports BP measurement');
+          debugPrint('     • Enable BP tracking in FitCloudPro app settings');
+          debugPrint('     • Ensure BP data sync is enabled to Google Fit');
+          debugPrint('     • Take manual BP readings to generate data');
+          debugPrint('     • Some smartwatches require external BP cuff');
+        }
+
         if ((newTimeSeriesData['sleep_hours'] ?? []).isEmpty) {
           debugPrint('\n💡 SLEEP DATA GUIDANCE:');
           debugPrint('  😴 Sleep tracking may need configuration:');
@@ -204,6 +218,65 @@ class HealthDataService {
         }
 
         debugPrint(''); // Add spacing
+
+        // Fetch RDfit data for additional coverage
+        try {
+          debugPrint('\n🔗 FETCHING RDFIT DATA:');
+          debugPrint(
+            '  🔑 API Key configured: ${ApiConfig.isRDfitConfigured ? "Yes" : "No (using demo key)"}',
+          );
+
+          final rdfitData = await RDfitService.fetchAllRDfitData(
+            ApiConfig.configuredRDfitApiKey,
+            startTime,
+            endTime,
+          );
+
+          // Add RDfit data to existing data structures (supplement, don't overwrite)
+          for (var entry in rdfitData.entries) {
+            final dataType = entry.key;
+            final points = entry.value;
+
+            if (points.isNotEmpty) {
+              debugPrint('  ✅ RDfit $dataType: ${points.length} points');
+
+              // If we don't already have data for this type, use RDfit data
+              if ((newTimeSeriesData[dataType] ?? []).isEmpty) {
+                newTimeSeriesData[dataType] = points;
+
+                // Create summary data
+                final values = points.map((p) => p.value).toList();
+                values.sort();
+                final average =
+                    values.fold(0.0, (a, b) => a + b) / values.length;
+                final min = values.first;
+                final max = values.last;
+                final latest = points.last.value;
+                final trend =
+                    points.length > 1 ? (latest - points.first.value) : 0.0;
+
+                final summary = HealthSummary(
+                  average: average,
+                  min: min,
+                  max: max,
+                  latest: latest,
+                  trend: trend,
+                );
+                newSummaryData[dataType] = summary;
+                debugPrint('    📊 Added RDfit summary for $dataType');
+              } else {
+                debugPrint(
+                  '    ℹ️  $dataType already has data, keeping existing',
+                );
+              }
+            } else {
+              debugPrint('  ❌ RDfit $dataType: No data');
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️  Error fetching RDfit data: $e');
+          // Continue with other data sources even if RDfit fails
+        }
 
         await _fetchHeartRateData(
           accessToken,
@@ -288,16 +361,16 @@ class HealthDataService {
   }
 
   // Map FitCloudPro data types to our standard keys
-  String _mapFitCloudProDataType(String fitCloudProDataType) {
-    switch (fitCloudProDataType) {
+  String _mapFitCloudProDataType(String dataType) {
+    switch (dataType) {
       case 'com.google.heart_rate.bpm':
         return 'heart_rate';
-      case 'com.google.step_count.delta':
-        return 'steps';
       case 'com.google.oxygen_saturation':
         return 'oxygen_saturation';
-      case 'com.google.sleep.segment':
-        return 'sleep_hours';
+      case 'com.google.blood_pressure':
+        return 'blood_pressure';
+      case 'com.google.step_count.delta':
+        return 'steps';
       case 'com.google.calories.expended':
         return 'calories';
       case 'com.google.distance.delta':
@@ -305,7 +378,6 @@ class HealthDataService {
       case 'com.google.active_minutes':
         return 'active_minutes';
       default:
-        debugPrint('Unmapped FitCloudPro data type: $fitCloudProDataType');
         return '';
     }
   }
@@ -796,5 +868,219 @@ class HealthDataService {
     } catch (e) {
       debugPrint('Error fetching hourly steps data: $e');
     }
+  }
+
+  /// Fetch health data from Health Connect (universal smartwatch support)
+  /// This includes Oraimo, Samsung, Fitbit, Garmin, Apple Watch, and 50+ other brands
+  Future<Map<String, dynamic>> fetchHealthConnectData({
+    int selectedDays = 7,
+  }) async {
+    try {
+      // Initialize Health Connect if not already done
+      bool isInitialized = await _healthConnectService.initialize();
+      if (!isInitialized) {
+        debugPrint('Health Connect not available on this device');
+        return {};
+      }
+
+      final now = DateTime.now();
+      final startDate = now.subtract(Duration(days: selectedDays));
+
+      // Fetch health data from Health Connect
+      final healthData = await _healthConnectService.getHealthData(
+        startDate: startDate,
+        endDate: now,
+      );
+
+      debugPrint('Health Connect data retrieved: ${healthData['data_source']}');
+      debugPrint(
+        'Steps: ${healthData['steps']}, Heart Rate: ${healthData['heart_rate_avg']}, BP: ${healthData['blood_pressure_systolic_avg']}/${healthData['blood_pressure_diastolic_avg']}',
+      );
+
+      return healthData;
+    } catch (e) {
+      debugPrint('Error fetching Health Connect data: $e');
+      return {};
+    }
+  }
+
+  /// Check if Health Connect is available and supported
+  Future<bool> isHealthConnectAvailable() async {
+    try {
+      return await _healthConnectService.isAvailable();
+    } catch (e) {
+      debugPrint('Error checking Health Connect availability: $e');
+      return false;
+    }
+  }
+
+  /// Get comprehensive health data from all sources (Google Fit + Health Connect)
+  /// Returns full time series data format instead of summary statistics
+  /// Health Connect provides universal smartwatch support including blood pressure
+  Future<Map<String, dynamic>> fetchUniversalHealthData(
+    GoogleSignInAccount? user,
+    int selectedDays,
+  ) async {
+    debugPrint('🚀 fetchUniversalHealthData: Starting data collection...');
+
+    // Always prioritize full Google Fit data if user is signed in
+    // to preserve the 400+ time series data points
+    if (user != null) {
+      try {
+        debugPrint('📊 Attempting Google Fit data (preserves time series)...');
+        final googleFitData = await fetchComprehensiveHealthData(
+          user,
+          selectedDays,
+        );
+
+        // Check if we have substantial time series data
+        final timeSeriesData =
+            googleFitData['timeSeriesData']
+                as Map<String, List<HealthDataPoint>>?;
+        final totalPoints =
+            timeSeriesData?.values.fold(0, (sum, list) => sum + list.length) ??
+            0;
+
+        debugPrint('📈 Google Fit time series points: $totalPoints');
+
+        if (totalPoints > 10) {
+          // If we have good time series data, use it
+          debugPrint('✅ Using Google Fit data ($totalPoints data points)');
+
+          // Try to supplement with Health Connect blood pressure if available
+          try {
+            final healthConnectData = await fetchHealthConnectData(
+              selectedDays: selectedDays,
+            );
+            if (healthConnectData.isNotEmpty) {
+              final hasBP =
+                  (healthConnectData['blood_pressure_systolic_avg'] as num? ??
+                          0) >
+                      0 ||
+                  (healthConnectData['blood_pressure_diastolic_avg'] as num? ??
+                          0) >
+                      0;
+
+              if (hasBP) {
+                debugPrint('🩺 Adding Health Connect blood pressure data');
+                googleFitData['health_connect_bp'] = healthConnectData;
+              }
+            }
+          } catch (e) {
+            debugPrint('Health Connect BP supplement failed: $e');
+          }
+
+          return googleFitData;
+        }
+      } catch (e) {
+        debugPrint('Google Fit data error: $e');
+      }
+    }
+
+    // Fallback to Health Connect summary data only if Google Fit fails
+    debugPrint('📱 Falling back to Health Connect summary data...');
+    Map<String, dynamic> combinedData = {};
+
+    try {
+      final healthConnectData = await fetchHealthConnectData(
+        selectedDays: selectedDays,
+      );
+
+      if (healthConnectData.isNotEmpty) {
+        combinedData['health_connect'] = healthConnectData;
+        debugPrint(
+          '✅ Health Connect data available - Universal smartwatch support active',
+        );
+      }
+    } catch (e) {
+      debugPrint('Health Connect not available: $e');
+    }
+
+    // Create unified data structure (summary format)
+    return _unifyHealthData(combinedData);
+  }
+
+  /// Unify data from multiple sources, prioritizing Health Connect for blood pressure
+  Map<String, dynamic> _unifyHealthData(Map<String, dynamic> sources) {
+    Map<String, dynamic> unified = {
+      'steps': 0,
+      'heart_rate_avg': 0,
+      'blood_pressure_systolic': 0,
+      'blood_pressure_diastolic': 0,
+      'oxygen_saturation_avg': 0,
+      'calories': 0,
+      'distance': 0.0,
+      'sleep_hours': 0.0,
+      'data_sources': <String>[],
+      'blood_pressure_available': false,
+      'last_updated': DateTime.now().toIso8601String(),
+    };
+
+    debugPrint('🔄 Unifying data from sources: ${sources.keys.toList()}');
+
+    // Prioritize Health Connect data (universal smartwatch support)
+    if (sources.containsKey('health_connect')) {
+      final hcData = sources['health_connect'] as Map<String, dynamic>;
+      debugPrint('📱 Health Connect steps data: ${hcData['steps']}');
+
+      unified['steps'] = hcData['steps'] ?? 0;
+      unified['heart_rate_avg'] = hcData['heart_rate_avg'] ?? 0;
+      unified['blood_pressure_systolic'] =
+          hcData['blood_pressure_systolic_avg'] ?? 0;
+      unified['blood_pressure_diastolic'] =
+          hcData['blood_pressure_diastolic_avg'] ?? 0;
+      unified['oxygen_saturation_avg'] = hcData['oxygen_saturation_avg'] ?? 0;
+      unified['calories'] = hcData['calories'] ?? 0;
+      unified['distance'] = hcData['distance'] ?? 0.0;
+      unified['sleep_hours'] = hcData['sleep_hours'] ?? 0.0;
+
+      (unified['data_sources'] as List<String>).add(
+        'Health Connect (Universal)',
+      );
+
+      // Check if blood pressure data is available
+      if ((unified['blood_pressure_systolic'] as num) > 0 ||
+          (unified['blood_pressure_diastolic'] as num) > 0) {
+        unified['blood_pressure_available'] = true;
+      }
+    }
+
+    // Supplement with Google Fit data if Health Connect values are missing
+    if (sources.containsKey('google_fit')) {
+      final gfData = sources['google_fit'] as Map<String, dynamic>;
+
+      // Only use Google Fit data if Health Connect didn't provide it
+      if (unified['steps'] == 0 && gfData.containsKey('summaryData')) {
+        final summaryData = gfData['summaryData'] as Map<String, dynamic>;
+        debugPrint('🔄 Health Connect steps = 0, checking Google Fit fallback');
+        if (summaryData.containsKey('steps')) {
+          final stepsData = summaryData['steps'] as HealthSummary?;
+          final stepsValue = stepsData?.latest;
+          debugPrint('📊 Google Fit steps available: $stepsValue');
+          if (stepsValue != null) {
+            unified['steps'] = stepsValue.toInt();
+            debugPrint('✅ Using Google Fit steps: ${unified['steps']}');
+          }
+        }
+        if (summaryData.containsKey('heart_rate')) {
+          final heartRateData = summaryData['heart_rate'] as HealthSummary?;
+          final heartRateValue = heartRateData?.average;
+          if (heartRateValue != null) {
+            unified['heart_rate_avg'] = heartRateValue.toInt();
+          }
+        }
+        if (summaryData.containsKey('calories')) {
+          final caloriesData = summaryData['calories'] as HealthSummary?;
+          final caloriesValue = caloriesData?.latest;
+          if (caloriesValue != null) {
+            unified['calories'] = caloriesValue.toInt();
+          }
+        }
+      }
+
+      (unified['data_sources'] as List<String>).add('Google Fit');
+    }
+
+    return unified;
   }
 }

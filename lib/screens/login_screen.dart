@@ -30,10 +30,22 @@ class LoginScreen extends StatelessWidget {
                   color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(30),
                 ),
-                child: Icon(
-                  Icons.health_and_safety_rounded,
-                  size: 60,
-                  color: Colors.white,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/icons/smarthealth_logo.png',
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback to icon if image fails to load
+                      return Icon(
+                        Icons.health_and_safety_rounded,
+                        size: 60,
+                        color: Colors.white,
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: AppTheme.spacingXL),

@@ -451,7 +451,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                     ),
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),
@@ -626,7 +626,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                       ),
                       const SizedBox(height: AppTheme.spacingS),
                       Text(
-                        '${profile.bmi!.toStringAsFixed(1)}',
+                        profile.bmi!.toStringAsFixed(1),
                         style: AppTheme.headingLarge.copyWith(
                           color: AppTheme.primaryMedical,
                           fontWeight: FontWeight.w700,

@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../models/health_models.dart';
 import '../constants/app_theme.dart';
 import '../services/health_data_service.dart';
+import '../services/prediction_scheduler_service.dart';
 import '../widgets/detailed_chart.dart';
 import '../widgets/detailed_stats.dart';
 import '../screens/dashboard_screen.dart';
@@ -14,6 +15,7 @@ import '../screens/profile_setup_screen.dart';
 import '../screens/profile_page.dart';
 import '../models/user_profile.dart';
 import '../services/user_profile_service.dart';
+import 'data_sources_page.dart';
 
 class HealthDataPage extends StatefulWidget {
   const HealthDataPage({super.key});
@@ -24,6 +26,7 @@ class HealthDataPage extends StatefulWidget {
 
 class _HealthDataPageState extends State<HealthDataPage> {
   final HealthDataService _healthDataService = HealthDataService();
+  final PredictionSchedulerService _predictionScheduler = PredictionSchedulerService();
 
   GoogleSignInAccount? _user;
   Map<String, List<HealthDataPoint>> _timeSeriesData = {};
@@ -48,6 +51,7 @@ class _HealthDataPageState extends State<HealthDataPage> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _predictionScheduler.stopScheduler();
     // Don't automatically sign out on dispose - let user stay signed in
     // Only sign out when they explicitly choose to do so
     super.dispose();
@@ -97,6 +101,9 @@ class _HealthDataPageState extends State<HealthDataPage> {
         // Fetch health data if profile is complete
         if (!_showProfileSetup) {
           await _fetchComprehensiveHealthData();
+          
+          // Start prediction scheduler for returning users
+          await _startPredictionScheduler();
         }
       } else {
         // Silent sign-in failed, clear invalid session
@@ -207,6 +214,9 @@ class _HealthDataPageState extends State<HealthDataPage> {
 
     // Now fetch health data
     await _fetchComprehensiveHealthData();
+
+    // Start the prediction scheduler (every 3 hours)
+    await _startPredictionScheduler();
   }
 
   void _showProfile() async {
@@ -267,6 +277,38 @@ class _HealthDataPageState extends State<HealthDataPage> {
     }
   }
 
+  void _showDataSourcesPage(BuildContext context) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const DataSourcesPage()));
+  }
+
+  Future<void> _startPredictionScheduler() async {
+    try {
+      debugPrint('🔮 Starting hypertension prediction scheduler...');
+      
+      // Start the scheduler with immediate first run
+      await _predictionScheduler.startScheduler(
+        healthDataService: _healthDataService,
+        user: _user,
+        runImmediately: true, // Run first prediction immediately
+      );
+
+      // Add listener to update UI when predictions complete
+      _predictionScheduler.addListener((prediction) {
+        if (mounted) {
+          setState(() {
+            debugPrint('📊 New prediction received: ${prediction.riskLevel.label}');
+          });
+        }
+      });
+
+      debugPrint('✅ Prediction scheduler started successfully');
+    } catch (e) {
+      debugPrint('❌ Error starting prediction scheduler: $e');
+    }
+  }
+
   Future<void> _fetchComprehensiveHealthData({
     bool isAutoRefresh = false,
   }) async {
@@ -285,16 +327,74 @@ class _HealthDataPageState extends State<HealthDataPage> {
     });
 
     try {
-      final result = await _healthDataService.fetchComprehensiveHealthData(
-        _user!,
+      // Try universal health data (now prioritizes full time series from Google Fit)
+      final universalResult = await _healthDataService.fetchUniversalHealthData(
+        _user,
         _selectedDays,
       );
 
-      setState(() {
-        _timeSeriesData = result['timeSeriesData'];
-        _summaryData = result['summaryData'];
-        _debugMessage = result['message'];
-      });
+      debugPrint('🔍 Universal result keys: ${universalResult.keys.toList()}');
+
+      // Check if this is full time series data or summary data
+      if (universalResult.containsKey('timeSeriesData') &&
+          universalResult.containsKey('summaryData')) {
+        // This is full Google Fit format with time series data
+        final timeSeriesData =
+            universalResult['timeSeriesData']
+                as Map<String, List<HealthDataPoint>>;
+        final totalPoints = timeSeriesData.values.fold(
+          0,
+          (sum, list) => sum + list.length,
+        );
+        debugPrint(
+          '📊 Processing full time series data format with $totalPoints data points',
+        );
+
+        setState(() {
+          _timeSeriesData = universalResult['timeSeriesData'];
+          _summaryData = universalResult['summaryData'];
+
+          // Enhanced message with data point counts
+          String message =
+              universalResult['message'] as String? ?? 'Data loaded';
+          message += '\n📈 Total data points: $totalPoints';
+
+          // Show breakdown by metric
+          timeSeriesData.forEach((key, points) {
+            if (points.isNotEmpty) {
+              message += '\n  • $key: ${points.length} points';
+            }
+          });
+
+          // Check if we have Health Connect blood pressure to supplement
+          if (universalResult.containsKey('health_connect_bp')) {
+            message += '\n🩺 Blood pressure data available via Health Connect!';
+          }
+          _debugMessage = message;
+        });
+      } else if (universalResult.isNotEmpty &&
+          _hasValidHealthData(universalResult)) {
+        // This is summary format from Health Connect
+        debugPrint('📱 Processing Health Connect summary data format');
+        setState(() {
+          _timeSeriesData = _convertUniversalToTimeSeries(universalResult);
+          _summaryData = _convertUniversalToSummary(universalResult);
+          _debugMessage = _buildUniversalDataMessage(universalResult);
+        });
+      } else {
+        // Fallback to traditional Google Fit method (shouldn't happen with new logic)
+        debugPrint('⚠️ Fallback to traditional Google Fit method');
+        final result = await _healthDataService.fetchComprehensiveHealthData(
+          _user!,
+          _selectedDays,
+        );
+
+        setState(() {
+          _timeSeriesData = result['timeSeriesData'];
+          _summaryData = result['summaryData'];
+          _debugMessage = result['message'];
+        });
+      }
     } catch (error) {
       if (isAutoRefresh) {
         _autoRefreshFailures++;
@@ -477,6 +577,16 @@ class _HealthDataPageState extends State<HealthDataPage> {
                         ],
                       ),
                     ),
+                  // Data sources button
+                  IconButton(
+                    onPressed: () => _showDataSourcesPage(context),
+                    icon: const Icon(
+                      Icons.storage_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    tooltip: 'Data Sources',
+                  ),
                   // Manual refresh button
                   IconButton(
                     onPressed:
@@ -576,6 +686,210 @@ class _HealthDataPageState extends State<HealthDataPage> {
       onRefresh: _fetchComprehensiveHealthData,
       onShowDetail: _showDetailedView,
       onProfileTap: _showProfile,
+      predictionScheduler: _predictionScheduler,
     );
+  }
+
+  /// Check if universal health data has valid content
+  bool _hasValidHealthData(Map<String, dynamic> data) {
+    final steps = data['steps'] as int? ?? 0;
+    final heartRate = data['heart_rate_avg'] as int? ?? 0;
+    final bloodPressure = data['blood_pressure_available'] as bool? ?? false;
+    final dataSources = data['data_sources'] as List<String>? ?? [];
+
+    return steps > 0 ||
+        heartRate > 0 ||
+        bloodPressure ||
+        dataSources.isNotEmpty;
+  }
+
+  /// Convert universal health data to time series format
+  Map<String, List<HealthDataPoint>> _convertUniversalToTimeSeries(
+    Map<String, dynamic> data,
+  ) {
+    Map<String, List<HealthDataPoint>> timeSeries = {};
+    final now = DateTime.now();
+
+    // Steps
+    if ((data['steps'] as int? ?? 0) > 0) {
+      timeSeries['steps'] = [
+        HealthDataPoint(
+          value: (data['steps'] as int).toDouble(),
+          timestamp: now,
+        ),
+      ];
+    }
+
+    // Heart Rate
+    if ((data['heart_rate_avg'] as int? ?? 0) > 0) {
+      timeSeries['heart_rate'] = [
+        HealthDataPoint(
+          value: (data['heart_rate_avg'] as int).toDouble(),
+          timestamp: now,
+        ),
+      ];
+    }
+
+    // Blood Pressure (NEW - from Health Connect)
+    if ((data['blood_pressure_systolic'] as int? ?? 0) > 0) {
+      timeSeries['blood_pressure_systolic'] = [
+        HealthDataPoint(
+          value: (data['blood_pressure_systolic'] as int).toDouble(),
+          timestamp: now,
+        ),
+      ];
+    }
+
+    if ((data['blood_pressure_diastolic'] as int? ?? 0) > 0) {
+      timeSeries['blood_pressure_diastolic'] = [
+        HealthDataPoint(
+          value: (data['blood_pressure_diastolic'] as int).toDouble(),
+          timestamp: now,
+        ),
+      ];
+    }
+
+    // Oxygen Saturation
+    if ((data['oxygen_saturation_avg'] as int? ?? 0) > 0) {
+      timeSeries['oxygen_saturation'] = [
+        HealthDataPoint(
+          value: (data['oxygen_saturation_avg'] as int).toDouble(),
+          timestamp: now,
+        ),
+      ];
+    }
+
+    // Calories
+    if ((data['calories'] as int? ?? 0) > 0) {
+      timeSeries['calories'] = [
+        HealthDataPoint(
+          value: (data['calories'] as int).toDouble(),
+          timestamp: now,
+        ),
+      ];
+    }
+
+    return timeSeries;
+  }
+
+  /// Convert universal health data to summary format
+  Map<String, HealthSummary> _convertUniversalToSummary(
+    Map<String, dynamic> data,
+  ) {
+    Map<String, HealthSummary> summary = {};
+    debugPrint(
+      '🔄 Converting universal data to summary: ${data.keys.toList()}',
+    );
+
+    // Steps
+    final steps = (data['steps'] as int? ?? 0).toDouble();
+    debugPrint('📊 Converting steps data: $steps');
+    if (steps > 0) {
+      summary['steps'] = HealthSummary(
+        average: steps,
+        min: steps,
+        max: steps,
+        latest: steps,
+        trend: 0.0,
+      );
+      debugPrint('✅ Steps summary created with value: $steps');
+    } else {
+      debugPrint('❌ No steps data - steps = $steps');
+    }
+
+    // Heart Rate
+    final heartRate = (data['heart_rate_avg'] as int? ?? 0).toDouble();
+    if (heartRate > 0) {
+      summary['heart_rate'] = HealthSummary(
+        average: heartRate,
+        min: heartRate,
+        max: heartRate,
+        latest: heartRate,
+        trend: 0.0,
+      );
+    }
+
+    // Blood Pressure Systolic (NEW)
+    final systolic = (data['blood_pressure_systolic'] as int? ?? 0).toDouble();
+    if (systolic > 0) {
+      summary['blood_pressure_systolic'] = HealthSummary(
+        average: systolic,
+        min: systolic,
+        max: systolic,
+        latest: systolic,
+        trend: 0.0,
+      );
+    }
+
+    // Blood Pressure Diastolic (NEW)
+    final diastolic =
+        (data['blood_pressure_diastolic'] as int? ?? 0).toDouble();
+    if (diastolic > 0) {
+      summary['blood_pressure_diastolic'] = HealthSummary(
+        average: diastolic,
+        min: diastolic,
+        max: diastolic,
+        latest: diastolic,
+        trend: 0.0,
+      );
+    }
+
+    // Oxygen Saturation
+    final oxygen = (data['oxygen_saturation_avg'] as int? ?? 0).toDouble();
+    if (oxygen > 0) {
+      summary['oxygen_saturation'] = HealthSummary(
+        average: oxygen,
+        min: oxygen,
+        max: oxygen,
+        latest: oxygen,
+        trend: 0.0,
+      );
+    }
+
+    // Calories
+    final calories = (data['calories'] as int? ?? 0).toDouble();
+    if (calories > 0) {
+      summary['calories'] = HealthSummary(
+        average: calories,
+        min: calories,
+        max: calories,
+        latest: calories,
+        trend: 0.0,
+      );
+    }
+
+    return summary;
+  }
+
+  /// Build debug message for universal data
+  String _buildUniversalDataMessage(Map<String, dynamic> data) {
+    final dataSources = data['data_sources'] as List<String>? ?? [];
+    final bloodPressureAvailable =
+        data['blood_pressure_available'] as bool? ?? false;
+    final steps = data['steps'] as int? ?? 0;
+    final heartRate = data['heart_rate_avg'] as int? ?? 0;
+
+    if (dataSources.isEmpty) {
+      return 'No health data sources available';
+    }
+
+    String message = '📱 Connected: ${dataSources.join(', ')}\n';
+
+    if (bloodPressureAvailable) {
+      message += '🩺 Blood pressure data available!\n';
+    }
+
+    if (steps > 0) {
+      message += '👟 Steps: ${steps.toString()}\n';
+    }
+
+    if (heartRate > 0) {
+      message += '❤️ Heart rate: ${heartRate}bpm\n';
+    }
+
+    message +=
+        '\n✅ Universal smartwatch support active (Oraimo, Samsung, Fitbit, etc.)';
+
+    return message;
   }
 }

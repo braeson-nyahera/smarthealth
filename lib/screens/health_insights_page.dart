@@ -828,8 +828,8 @@ class _HealthInsightsPageState extends State<HealthInsightsPage>
   }
 
   String _getCaloriesTotal() {
-    if (widget.summaryData.containsKey('active_energy')) {
-      return '${widget.summaryData['active_energy']!.latest.toInt()}';
+    if (widget.summaryData.containsKey('calories')) {
+      return '${widget.summaryData['calories']!.latest.toInt()}';
     }
     return '--';
   }

@@ -4,9 +4,11 @@ import '../widgets/user_header.dart';
 import '../widgets/smartwatch_stats_card.dart';
 import '../widgets/category_header.dart';
 import '../widgets/metric_card.dart';
+import '../widgets/prediction_scheduler_status.dart';
 import '../models/health_models.dart';
 import '../utils/health_utils.dart';
 import '../constants/health_metrics.dart';
+import '../services/prediction_scheduler_service.dart';
 
 class DashboardScreen extends StatelessWidget {
   final dynamic user;
@@ -16,6 +18,7 @@ class DashboardScreen extends StatelessWidget {
   final VoidCallback onRefresh;
   final void Function(String, HealthMetric, List<HealthDataPoint>) onShowDetail;
   final VoidCallback? onProfileTap;
+  final PredictionSchedulerService? predictionScheduler;
 
   const DashboardScreen({
     super.key,
@@ -26,6 +29,7 @@ class DashboardScreen extends StatelessWidget {
     required this.onRefresh,
     required this.onShowDetail,
     this.onProfileTap,
+    this.predictionScheduler,
   });
 
   @override
@@ -43,6 +47,11 @@ class DashboardScreen extends StatelessWidget {
             onProfileTap: onProfileTap,
           ),
           const SizedBox(height: AppTheme.spacingM),
+          // Show prediction scheduler status if active
+          if (predictionScheduler != null)
+            PredictionSchedulerStatus(scheduler: predictionScheduler!),
+          if (predictionScheduler != null)
+            const SizedBox(height: AppTheme.spacingM),
           SmartwatchStatsCard(
             user: user,
             timeSeriesData: timeSeriesData,
