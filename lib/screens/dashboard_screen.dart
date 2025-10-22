@@ -34,6 +34,17 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Debug logging
+    debugPrint(
+      '🏠 Dashboard build - predictionScheduler is ${predictionScheduler == null ? "null" : "not null"}',
+    );
+    if (predictionScheduler != null) {
+      debugPrint('   Scheduler running: ${predictionScheduler!.isRunning}');
+      debugPrint(
+        '   Has prediction: ${predictionScheduler!.latestPrediction != null}',
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppTheme.spacingM),
       child: Column(

@@ -6,13 +6,11 @@ import '../constants/app_theme.dart';
 class PredictionSchedulerStatus extends StatefulWidget {
   final PredictionSchedulerService scheduler;
 
-  const PredictionSchedulerStatus({
-    super.key,
-    required this.scheduler,
-  });
+  const PredictionSchedulerStatus({super.key, required this.scheduler});
 
   @override
-  State<PredictionSchedulerStatus> createState() => _PredictionSchedulerStatusState();
+  State<PredictionSchedulerStatus> createState() =>
+      _PredictionSchedulerStatusState();
 }
 
 class _PredictionSchedulerStatusState extends State<PredictionSchedulerStatus> {
@@ -23,9 +21,15 @@ class _PredictionSchedulerStatusState extends State<PredictionSchedulerStatus> {
     final timeUntilNext = widget.scheduler.timeUntilNextPrediction;
     final isRunning = widget.scheduler.isRunning;
 
-    if (!isRunning || latestPrediction == null) {
+    // Don't show if scheduler is not running
+    if (!isRunning) {
+      debugPrint('🔍 Scheduler status widget: Not running');
       return const SizedBox.shrink();
     }
+
+    debugPrint(
+      '🔍 Scheduler status widget: Running - Has prediction: ${latestPrediction != null}',
+    );
 
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -36,18 +40,11 @@ class _PredictionSchedulerStatusState extends State<PredictionSchedulerStatus> {
       decoration: BoxDecoration(
         color: Colors.blue.shade50,
         borderRadius: BorderRadius.circular(AppTheme.radiusM),
-        border: Border.all(
-          color: Colors.blue.shade200,
-          width: 1,
-        ),
+        border: Border.all(color: Colors.blue.shade200, width: 1),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.schedule,
-            color: Colors.blue.shade700,
-            size: 20,
-          ),
+          Icon(Icons.schedule, color: Colors.blue.shade700, size: 20),
           const SizedBox(width: AppTheme.spacingS),
           Expanded(
             child: Column(
@@ -71,35 +68,74 @@ class _PredictionSchedulerStatusState extends State<PredictionSchedulerStatus> {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppTheme.spacingS,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: latestPrediction.riskLevel.color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(AppTheme.radiusS),
-              border: Border.all(
-                color: latestPrediction.riskLevel.color.withOpacity(0.5),
+          // Only show risk badge if we have a prediction
+          if (latestPrediction != null)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingS,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: latestPrediction.riskLevel.color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(AppTheme.radiusS),
+                border: Border.all(
+                  color: latestPrediction.riskLevel.color.withOpacity(0.5),
+                ),
+              ),
+              child: Text(
+                latestPrediction.riskLevel.label,
+                style: AppTheme.bodySmall.copyWith(
+                  color: latestPrediction.riskLevel.color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+            )
+          else
+            // Show "waiting" indicator if no prediction yet
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.spacingS,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(AppTheme.radiusS),
+                border: Border.all(color: Colors.grey.shade400),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Running...',
+                    style: AppTheme.bodySmall.copyWith(
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Text(
-              latestPrediction.riskLevel.label,
-              style: AppTheme.bodySmall.copyWith(
-                color: latestPrediction.riskLevel.color,
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
   String _getStatusText(DateTime? lastTime, Duration? timeUntilNext) {
-    if (lastTime == null || timeUntilNext == null) {
-      return 'Running every 3 hours';
+    if (lastTime == null) {
+      return 'First prediction in progress...';
     }
 
     final now = DateTime.now();
@@ -113,7 +149,12 @@ class _PredictionSchedulerStatusState extends State<PredictionSchedulerStatus> {
     } else {
       final hours = timeSince.inHours;
       final minutes = timeSince.inMinutes % 60;
-      lastTimeText = minutes > 0 ? '${hours}h ${minutes}m ago' : '${hours}h ago';
+      lastTimeText =
+          minutes > 0 ? '${hours}h ${minutes}m ago' : '${hours}h ago';
+    }
+
+    if (timeUntilNext == null) {
+      return 'Last: $lastTimeText';
     }
 
     String nextTimeText;

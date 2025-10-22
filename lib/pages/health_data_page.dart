@@ -26,7 +26,8 @@ class HealthDataPage extends StatefulWidget {
 
 class _HealthDataPageState extends State<HealthDataPage> {
   final HealthDataService _healthDataService = HealthDataService();
-  final PredictionSchedulerService _predictionScheduler = PredictionSchedulerService();
+  final PredictionSchedulerService _predictionScheduler =
+      PredictionSchedulerService();
 
   GoogleSignInAccount? _user;
   Map<String, List<HealthDataPoint>> _timeSeriesData = {};
@@ -101,7 +102,7 @@ class _HealthDataPageState extends State<HealthDataPage> {
         // Fetch health data if profile is complete
         if (!_showProfileSetup) {
           await _fetchComprehensiveHealthData();
-          
+
           // Start prediction scheduler for returning users
           await _startPredictionScheduler();
         }
@@ -286,7 +287,7 @@ class _HealthDataPageState extends State<HealthDataPage> {
   Future<void> _startPredictionScheduler() async {
     try {
       debugPrint('🔮 Starting hypertension prediction scheduler...');
-      
+
       // Start the scheduler with immediate first run
       await _predictionScheduler.startScheduler(
         healthDataService: _healthDataService,
@@ -298,7 +299,9 @@ class _HealthDataPageState extends State<HealthDataPage> {
       _predictionScheduler.addListener((prediction) {
         if (mounted) {
           setState(() {
-            debugPrint('📊 New prediction received: ${prediction.riskLevel.label}');
+            debugPrint(
+              '📊 New prediction received: ${prediction.riskLevel.label}',
+            );
           });
         }
       });

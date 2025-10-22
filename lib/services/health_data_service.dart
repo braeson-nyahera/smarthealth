@@ -6,10 +6,10 @@ import '../models/health_models.dart';
 import '../constants/health_metrics.dart';
 import '../utils/health_utils.dart';
 import '../config/google_config.dart';
-import '../config/api_config.dart';
 import 'google_fit_service.dart';
-import 'rdfit_service.dart';
 import 'health_connect_service.dart';
+import 'blood_pressure_prediction_service.dart';
+import 'user_profile_service.dart';
 
 class HealthDataService {
   late GoogleSignIn _googleSignIn;
@@ -219,65 +219,6 @@ class HealthDataService {
 
         debugPrint(''); // Add spacing
 
-        // Fetch RDfit data for additional coverage
-        try {
-          debugPrint('\n🔗 FETCHING RDFIT DATA:');
-          debugPrint(
-            '  🔑 API Key configured: ${ApiConfig.isRDfitConfigured ? "Yes" : "No (using demo key)"}',
-          );
-
-          final rdfitData = await RDfitService.fetchAllRDfitData(
-            ApiConfig.configuredRDfitApiKey,
-            startTime,
-            endTime,
-          );
-
-          // Add RDfit data to existing data structures (supplement, don't overwrite)
-          for (var entry in rdfitData.entries) {
-            final dataType = entry.key;
-            final points = entry.value;
-
-            if (points.isNotEmpty) {
-              debugPrint('  ✅ RDfit $dataType: ${points.length} points');
-
-              // If we don't already have data for this type, use RDfit data
-              if ((newTimeSeriesData[dataType] ?? []).isEmpty) {
-                newTimeSeriesData[dataType] = points;
-
-                // Create summary data
-                final values = points.map((p) => p.value).toList();
-                values.sort();
-                final average =
-                    values.fold(0.0, (a, b) => a + b) / values.length;
-                final min = values.first;
-                final max = values.last;
-                final latest = points.last.value;
-                final trend =
-                    points.length > 1 ? (latest - points.first.value) : 0.0;
-
-                final summary = HealthSummary(
-                  average: average,
-                  min: min,
-                  max: max,
-                  latest: latest,
-                  trend: trend,
-                );
-                newSummaryData[dataType] = summary;
-                debugPrint('    📊 Added RDfit summary for $dataType');
-              } else {
-                debugPrint(
-                  '    ℹ️  $dataType already has data, keeping existing',
-                );
-              }
-            } else {
-              debugPrint('  ❌ RDfit $dataType: No data');
-            }
-          }
-        } catch (e) {
-          debugPrint('⚠️  Error fetching RDfit data: $e');
-          // Continue with other data sources even if RDfit fails
-        }
-
         await _fetchHeartRateData(
           accessToken,
           startTime,
@@ -341,6 +282,9 @@ class HealthDataService {
         0,
         (sum, list) => sum + list.length,
       );
+
+      // Predict blood pressure if not available or insufficient data
+      await _addPredictedBloodPressure(newTimeSeriesData, newSummaryData);
 
       final message =
           'Successfully fetched $totalDataPoints data points from ${newTimeSeriesData.length} different metrics';
@@ -1082,5 +1026,137 @@ class HealthDataService {
     }
 
     return unified;
+  }
+
+  /// Predict and add blood pressure data if not available or insufficient
+  Future<void> _addPredictedBloodPressure(
+    Map<String, List<HealthDataPoint>> timeSeriesData,
+    Map<String, HealthSummary> summaryData,
+  ) async {
+    try {
+      // Check if we have actual BP data
+      final systolicData = timeSeriesData['blood_pressure_systolic'] ?? [];
+      final diastolicData = timeSeriesData['blood_pressure_diastolic'] ?? [];
+
+      // Only predict if we have no BP data or very limited data
+      if (systolicData.length < 3 && diastolicData.length < 3) {
+        debugPrint('🩺 Insufficient BP data detected. Running prediction...');
+
+        // Load user profile for age and BMI
+        final profile = await UserProfileService.loadProfile();
+
+        // Get historical BP if available
+        Map<String, double>? historicalBP;
+        if (systolicData.isNotEmpty && diastolicData.isNotEmpty) {
+          final avgSystolic =
+              systolicData.fold<double>(
+                0.0,
+                (sum, point) => sum + point.value,
+              ) /
+              systolicData.length;
+          final avgDiastolic =
+              diastolicData.fold<double>(
+                0.0,
+                (sum, point) => sum + point.value,
+              ) /
+              diastolicData.length;
+
+          historicalBP = {'systolic': avgSystolic, 'diastolic': avgDiastolic};
+        }
+
+        // Run BP prediction
+        final prediction =
+            await BloodPressurePredictionService.predictBloodPressure(
+              timeSeriesData: timeSeriesData,
+              age: profile?.age,
+              bmi: profile?.bmi,
+              isSmoker: false, // Not available in profile
+              hasHighCholesterol: false, // Not available in profile
+              historicalBP: historicalBP,
+            );
+
+        final systolic = prediction['systolic'] as int;
+        final diastolic = prediction['diastolic'] as int;
+        final confidence = prediction['confidence'] as double;
+        final timestamp = prediction['timestamp'] as DateTime;
+
+        debugPrint(
+          '✅ BP Prediction: $systolic/$diastolic mmHg (${(confidence * 100).toStringAsFixed(0)}% confidence)',
+        );
+
+        // Generate BP data points for visualization
+        final systolicPoints =
+            BloodPressurePredictionService.generateBPDataPoints(
+              systolic: systolic,
+              diastolic: diastolic,
+              timestamp: timestamp,
+              numberOfDays: 7,
+              useSystolic: true,
+            );
+
+        final diastolicPoints =
+            BloodPressurePredictionService.generateBPDataPoints(
+              systolic: systolic,
+              diastolic: diastolic,
+              timestamp: timestamp,
+              numberOfDays: 7,
+              useSystolic: false,
+            );
+
+        // Add to time series data (merge with existing if any)
+        timeSeriesData['blood_pressure_systolic'] = [
+          ...systolicData,
+          ...systolicPoints,
+        ];
+
+        timeSeriesData['blood_pressure_diastolic'] = [
+          ...diastolicData,
+          ...diastolicPoints,
+        ];
+
+        // Create summary data
+        final bpSummary = BloodPressurePredictionService.createBPSummary(
+          systolic: systolic,
+          diastolic: diastolic,
+          confidence: confidence,
+        );
+
+        summaryData['blood_pressure_systolic'] = HealthSummary(
+          latest: systolic.toDouble(),
+          average: systolic.toDouble(),
+          min: (systolic - 5).toDouble(),
+          max: (systolic + 5).toDouble(),
+          trend: 0.0,
+        );
+
+        summaryData['blood_pressure_diastolic'] = HealthSummary(
+          latest: diastolic.toDouble(),
+          average: diastolic.toDouble(),
+          min: (diastolic - 3).toDouble(),
+          max: (diastolic + 3).toDouble(),
+          trend: 0.0,
+        );
+
+        // Store prediction metadata
+        summaryData['bp_prediction_metadata'] = HealthSummary(
+          latest: confidence,
+          average: confidence,
+          min: confidence,
+          max: confidence,
+          trend: 0.0,
+        );
+
+        debugPrint('📊 Added predicted BP data points to time series');
+        debugPrint('   Category: ${bpSummary['category']}');
+        debugPrint('   Recommendation: ${bpSummary['recommendation']}');
+      } else {
+        debugPrint(
+          '✅ Sufficient BP data available (${systolicData.length} points). No prediction needed.',
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error adding predicted blood pressure: $e');
+      // Don't throw - just log the error and continue
+    }
   }
 }

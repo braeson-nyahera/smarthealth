@@ -8,7 +8,8 @@ import 'dart:convert';
 
 /// Service to automatically run hypertension predictions every 3 hours
 class PredictionSchedulerService {
-  static final PredictionSchedulerService _instance = PredictionSchedulerService._internal();
+  static final PredictionSchedulerService _instance =
+      PredictionSchedulerService._internal();
   factory PredictionSchedulerService() => _instance;
   PredictionSchedulerService._internal();
 
@@ -22,7 +23,7 @@ class PredictionSchedulerService {
 
   // Schedule interval: 3 hours
   static const Duration _scheduleInterval = Duration(hours: 3);
-  
+
   // Minimum interval between predictions (prevent too frequent calls)
   static const Duration _minInterval = Duration(hours: 2, minutes: 45);
 
@@ -83,9 +84,10 @@ class PredictionSchedulerService {
 
     // Run immediately if requested and enough time has passed
     if (runImmediately) {
-      final canRunNow = _lastPredictionTime == null ||
+      final canRunNow =
+          _lastPredictionTime == null ||
           DateTime.now().difference(_lastPredictionTime!) >= _minInterval;
-      
+
       if (canRunNow) {
         await _runPrediction(healthDataService, user);
       } else {
@@ -95,9 +97,10 @@ class PredictionSchedulerService {
 
     // Schedule periodic predictions
     _scheduledTimer = Timer.periodic(_scheduleInterval, (_) async {
-      final canRun = _lastPredictionTime == null ||
+      final canRun =
+          _lastPredictionTime == null ||
           DateTime.now().difference(_lastPredictionTime!) >= _minInterval;
-      
+
       if (canRun) {
         await _runPrediction(healthDataService, user);
       } else {
@@ -135,10 +138,10 @@ class PredictionSchedulerService {
   ) async {
     try {
       debugPrint('🔮 Running scheduled hypertension prediction...');
-      
+
       // Collect training data
       final trainingData = await _collectTrainingData(healthDataService, user);
-      
+
       if (!trainingData.hasEnoughData) {
         debugPrint('⚠️ Insufficient data for prediction');
         return null;
@@ -152,15 +155,21 @@ class PredictionSchedulerService {
       // Store prediction
       _latestPrediction = prediction;
       _lastPredictionTime = DateTime.now();
-      
+
       // Save to persistent storage
       await _savePrediction(prediction);
 
       debugPrint('✅ Prediction completed successfully');
       debugPrint('   Risk Level: ${prediction.riskLevel.label}');
-      debugPrint('   Risk Score: ${prediction.riskScore.toStringAsFixed(1)}/100');
-      debugPrint('   Confidence: ${(prediction.confidence * 100).toStringAsFixed(0)}%');
-      debugPrint('   Next prediction: ${_lastPredictionTime!.add(_scheduleInterval)}');
+      debugPrint(
+        '   Risk Score: ${prediction.riskScore.toStringAsFixed(1)}/100',
+      );
+      debugPrint(
+        '   Confidence: ${(prediction.confidence * 100).toStringAsFixed(0)}%',
+      );
+      debugPrint(
+        '   Next prediction: ${_lastPredictionTime!.add(_scheduleInterval)}',
+      );
 
       // Notify listeners
       _notifyListeners(prediction);
@@ -185,7 +194,8 @@ class PredictionSchedulerService {
       30,
     );
 
-    final timeSeriesData = result['timeSeriesData'] as Map<String, List<dynamic>>? ?? {};
+    final timeSeriesData =
+        result['timeSeriesData'] as Map<String, List<dynamic>>? ?? {};
 
     // Convert to time series data points
     final bloodPressureData = <TimeSeriesDataPoint>[];
@@ -197,11 +207,13 @@ class PredictionSchedulerService {
     if (timeSeriesData.containsKey('blood_pressure_systolic')) {
       final bpList = timeSeriesData['blood_pressure_systolic'] as List<dynamic>;
       for (final point in bpList) {
-        bloodPressureData.add(TimeSeriesDataPoint(
-          timestamp: point.timestamp,
-          value: point.value,
-          metric: 'blood_pressure_systolic',
-        ));
+        bloodPressureData.add(
+          TimeSeriesDataPoint(
+            timestamp: point.timestamp,
+            value: point.value,
+            metric: 'blood_pressure_systolic',
+          ),
+        );
       }
     }
 
@@ -209,11 +221,13 @@ class PredictionSchedulerService {
     if (timeSeriesData.containsKey('heart_rate')) {
       final hrList = timeSeriesData['heart_rate'] as List<dynamic>;
       for (final point in hrList) {
-        heartRateData.add(TimeSeriesDataPoint(
-          timestamp: point.timestamp,
-          value: point.value,
-          metric: 'heart_rate',
-        ));
+        heartRateData.add(
+          TimeSeriesDataPoint(
+            timestamp: point.timestamp,
+            value: point.value,
+            metric: 'heart_rate',
+          ),
+        );
       }
     }
 
@@ -221,11 +235,13 @@ class PredictionSchedulerService {
     if (timeSeriesData.containsKey('steps')) {
       final stepsList = timeSeriesData['steps'] as List<dynamic>;
       for (final point in stepsList) {
-        activityData.add(TimeSeriesDataPoint(
-          timestamp: point.timestamp,
-          value: point.value,
-          metric: 'steps',
-        ));
+        activityData.add(
+          TimeSeriesDataPoint(
+            timestamp: point.timestamp,
+            value: point.value,
+            metric: 'steps',
+          ),
+        );
       }
     }
 
@@ -233,18 +249,20 @@ class PredictionSchedulerService {
     if (timeSeriesData.containsKey('sleep_hours')) {
       final sleepList = timeSeriesData['sleep_hours'] as List<dynamic>;
       for (final point in sleepList) {
-        sleepData.add(TimeSeriesDataPoint(
-          timestamp: point.timestamp,
-          value: point.value,
-          metric: 'sleep_hours',
-        ));
+        sleepData.add(
+          TimeSeriesDataPoint(
+            timestamp: point.timestamp,
+            value: point.value,
+            metric: 'sleep_hours',
+          ),
+        );
       }
     }
 
     // Get user profile for risk factors
     final prefs = await SharedPreferences.getInstance();
     final profileJson = prefs.getString('user_profile');
-    
+
     RiskFactors riskFactors;
     if (profileJson != null) {
       final profile = jsonDecode(profileJson);
@@ -260,10 +278,7 @@ class PredictionSchedulerService {
       );
     } else {
       // Default risk factors
-      riskFactors = RiskFactors(
-        age: 30,
-        bmi: 25.0,
-      );
+      riskFactors = RiskFactors(age: 30, bmi: 25.0);
     }
 
     debugPrint('   Blood pressure points: ${bloodPressureData.length}');
@@ -285,7 +300,10 @@ class PredictionSchedulerService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_prediction', jsonEncode(prediction.toJson()));
-      await prefs.setString('last_prediction_time', _lastPredictionTime!.toIso8601String());
+      await prefs.setString(
+        'last_prediction_time',
+        _lastPredictionTime!.toIso8601String(),
+      );
       debugPrint('💾 Prediction saved to storage');
     } catch (e) {
       debugPrint('❌ Error saving prediction: $e');
@@ -301,7 +319,7 @@ class PredictionSchedulerService {
 
       if (predictionJson != null && timeString != null) {
         _lastPredictionTime = DateTime.parse(timeString);
-        
+
         // Reconstruct prediction (simplified - you may need to expand this)
         final data = jsonDecode(predictionJson);
         final riskLevelString = data['riskLevel'] as String;
@@ -360,11 +378,11 @@ Scheduler Status: ${_isRunning ? "Running" : "Stopped"}
   Future<void> clearPredictions() async {
     _latestPrediction = null;
     _lastPredictionTime = null;
-    
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('last_prediction');
     await prefs.remove('last_prediction_time');
-    
+
     debugPrint('🗑️ Predictions cleared');
   }
 }
