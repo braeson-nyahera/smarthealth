@@ -127,11 +127,11 @@ class PredictionSchedulerService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final timeString = prefs.getString('last_prediction_time');
-      
+
       if (timeString != null) {
         final storedTime = DateTime.parse(timeString);
         final ageInHours = DateTime.now().difference(storedTime).inHours;
-        
+
         if (ageInHours > 24) {
           debugPrint('🗑️ Clearing stale prediction data (${ageInHours}h old)');
           await prefs.remove('last_prediction');
@@ -310,7 +310,7 @@ class PredictionSchedulerService {
     debugPrint('      • Heart rate: ${heartRateData.length} points');
     debugPrint('      • Activity (steps): ${activityData.length} points');
     debugPrint('      • Sleep: ${sleepData.length} points');
-    
+
     final trainingData = ModelTrainingData(
       bloodPressureData: bloodPressureData,
       heartRateData: heartRateData,
@@ -318,8 +318,10 @@ class PredictionSchedulerService {
       sleepData: sleepData,
       riskFactors: riskFactors,
     );
-    
-    debugPrint('   ✓ Requirements: HR(${heartRateData.length}≥1) + [BP(${bloodPressureData.length}≥1) OR Activity(${activityData.length}≥1)]');
+
+    debugPrint(
+      '   ✓ Requirements: HR(${heartRateData.length}≥1) + [BP(${bloodPressureData.length}≥1) OR Activity(${activityData.length}≥1)]',
+    );
     debugPrint('   ✓ Has sufficient data: ${trainingData.hasEnoughData}');
 
     return trainingData;
@@ -329,18 +331,18 @@ class PredictionSchedulerService {
   Future<void> _savePrediction(HypertensionPrediction prediction) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Ensure _lastPredictionTime is current (should be set before calling this)
       final currentTime = _lastPredictionTime ?? DateTime.now();
-      
+
       debugPrint('💾 Saving prediction with time: $currentTime');
-      
+
       await prefs.setString('last_prediction', jsonEncode(prediction.toJson()));
       await prefs.setString(
         'last_prediction_time',
         currentTime.toIso8601String(),
       );
-      
+
       debugPrint('✅ Prediction saved to storage');
       debugPrint('   Time saved: $currentTime');
     } catch (e) {
@@ -361,19 +363,21 @@ class PredictionSchedulerService {
       if (predictionJson != null && timeString != null) {
         final storedTime = DateTime.parse(timeString);
         final ageInHours = DateTime.now().difference(storedTime).inHours;
-        
+
         debugPrint('   Stored prediction age: $ageInHours hours');
-        
+
         // Validate: discard predictions older than 24 hours (stale data)
         if (ageInHours > 24) {
-          debugPrint('⚠️ Stored prediction is stale (${ageInHours}h old) - clearing');
+          debugPrint(
+            '⚠️ Stored prediction is stale (${ageInHours}h old) - clearing',
+          );
           await prefs.remove('last_prediction');
           await prefs.remove('last_prediction_time');
           _lastPredictionTime = null;
           _latestPrediction = null;
           return;
         }
-        
+
         _lastPredictionTime = storedTime;
 
         debugPrint('✅ Successfully parsed stored time: $_lastPredictionTime');
@@ -407,8 +411,12 @@ class PredictionSchedulerService {
         debugPrint('   Risk: ${_latestPrediction!.riskLevel.label}');
       } else {
         debugPrint('⚠️ No stored prediction found');
-        debugPrint('   Prediction JSON: ${predictionJson != null ? 'present' : 'missing'}');
-        debugPrint('   Time string: ${timeString != null ? 'present' : 'missing'}');
+        debugPrint(
+          '   Prediction JSON: ${predictionJson != null ? 'present' : 'missing'}',
+        );
+        debugPrint(
+          '   Time string: ${timeString != null ? 'present' : 'missing'}',
+        );
       }
     } catch (e) {
       debugPrint('⚠️ Could not load last prediction: $e');

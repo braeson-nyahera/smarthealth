@@ -329,18 +329,18 @@ class ModelTrainingData {
   });
 
   /// Check if there's enough data for reliable prediction
-  /// 
+  ///
   /// Minimal requirements for real-time predictions (runs every 3 hours):
   /// - Heart rate: at least 1 data point (required)
   /// - Blood pressure OR activity: at least 1 data point (at least one required)
-  /// 
+  ///
   /// This allows immediate predictions as soon as data is available,
   /// rather than waiting for days of accumulated data.
   bool get hasEnoughData {
     final hasHeartRate = heartRateData.isNotEmpty;
     final hasBloodPressure = bloodPressureData.isNotEmpty;
     final hasActivity = activityData.isNotEmpty;
-    
+
     // Must have heart rate AND at least one other metric for basic prediction
     return hasHeartRate && (hasBloodPressure || hasActivity);
   }

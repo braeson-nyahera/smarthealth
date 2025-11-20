@@ -144,7 +144,9 @@ class _PredictionSchedulerStatusState extends State<PredictionSchedulerStatus> {
     debugPrint('⏰ Prediction timestamp calculation:');
     debugPrint('   Last prediction time: $lastTime');
     debugPrint('   Current time: $now');
-    debugPrint('   Time difference: ${timeSince.inHours}h ${timeSince.inMinutes % 60}m');
+    debugPrint(
+      '   Time difference: ${timeSince.inHours}h ${timeSince.inMinutes % 60}m',
+    );
 
     String lastTimeText;
     if (timeSince.inMinutes < 1) {
