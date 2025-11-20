@@ -306,6 +306,9 @@ class HealthDataService {
 
   // Map FitCloudPro data types to our standard keys
   String _mapFitCloudProDataType(String dataType) {
+    debugPrint('🔄 Mapping FitCloudPro data type: $dataType');
+    
+    // Check standard Google Fit data types
     switch (dataType) {
       case 'com.google.heart_rate.bpm':
         return 'heart_rate';
@@ -321,9 +324,28 @@ class HealthDataService {
         return 'distance';
       case 'com.google.active_minutes':
         return 'active_minutes';
-      default:
-        return '';
     }
+    
+    // Check for FitCloudPro specific data types (with source identifier)
+    if (dataType.contains('heart_rate') && dataType.contains('fitcloudpro')) {
+      debugPrint('✅ Identified FitCloudPro heart rate data');
+      return 'heart_rate';
+    }
+    if (dataType.contains('blood_pressure') && dataType.contains('fitcloudpro')) {
+      debugPrint('✅ Identified FitCloudPro blood pressure data');
+      return 'blood_pressure';
+    }
+    if (dataType.contains('step') && dataType.contains('fitcloudpro')) {
+      debugPrint('✅ Identified FitCloudPro step data');
+      return 'steps';
+    }
+    if (dataType.contains('oxygen') && dataType.contains('fitcloudpro')) {
+      debugPrint('✅ Identified FitCloudPro oxygen saturation data');
+      return 'oxygen_saturation';
+    }
+    
+    debugPrint('⚠️  Unknown FitCloudPro data type: $dataType');
+    return '';
   }
 
   Future<void> _fetchActivityData(

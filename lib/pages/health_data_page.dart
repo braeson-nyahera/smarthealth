@@ -7,7 +7,7 @@ import '../services/health_data_service.dart';
 import '../services/prediction_scheduler_service.dart';
 import '../widgets/detailed_chart.dart';
 import '../widgets/detailed_stats.dart';
-import '../screens/dashboard_screen.dart';
+import '../screens/main_app_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/loading_screen.dart';
 import '../screens/empty_state_screen.dart';
@@ -681,7 +681,7 @@ class _HealthDataPageState extends State<HealthDataPage> {
       );
     }
 
-    return DashboardScreen(
+    return MainAppScreen(
       user: _user!,
       selectedDays: _selectedDays,
       timeSeriesData: _timeSeriesData,

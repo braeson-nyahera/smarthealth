@@ -1303,12 +1303,18 @@ class GoogleFitService {
               if (foundData) break;
 
               try {
-                final startMs = (timeRange['start'] as int) * 1000000;
-                final endMs = (timeRange['end'] as int) * 1000000;
+                // Convert milliseconds to nanoseconds (multiply by 1,000,000)
+                final startNs =
+                    ((timeRange['start'] as int) * 1000000).toString();
+                final endNs = ((timeRange['end'] as int) * 1000000).toString();
+
+                debugPrint(
+                  '  🔍 Trying ${timeRange['label']}: $startNs to $endNs',
+                );
 
                 final dataResponse = await http.get(
                   Uri.parse(
-                    'https://www.googleapis.com/fitness/v1/users/me/dataSources/$streamId/datasets/$startMs-$endMs',
+                    'https://www.googleapis.com/fitness/v1/users/me/dataSources/$streamId/datasets/$startNs-$endNs',
                   ),
                   headers: {
                     'Authorization': 'Bearer $accessToken',

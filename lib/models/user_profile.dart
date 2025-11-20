@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 enum DiabetesState { none, diabetic }
 
+enum Gender { male, female }
+
 class UserProfile {
   final int? age;
+  final Gender? gender;
   final DiabetesState diabetesState;
   final double? weight; // in kg
   final double? height; // in cm
@@ -12,6 +15,7 @@ class UserProfile {
 
   UserProfile({
     this.age,
+    this.gender,
     this.diabetesState = DiabetesState.none,
     this.weight,
     this.height,
@@ -22,6 +26,7 @@ class UserProfile {
 
   UserProfile copyWith({
     int? age,
+    Gender? gender,
     DiabetesState? diabetesState,
     double? weight,
     double? height,
@@ -29,6 +34,7 @@ class UserProfile {
   }) {
     return UserProfile(
       age: age ?? this.age,
+      gender: gender ?? this.gender,
       diabetesState: diabetesState ?? this.diabetesState,
       weight: weight ?? this.weight,
       height: height ?? this.height,
@@ -67,6 +73,18 @@ class UserProfile {
     }
   }
 
+  // Get gender display name
+  String get genderDisplay {
+    if (gender == null) return 'Not specified';
+    return gender == Gender.male ? 'Male' : 'Female';
+  }
+
+  // Get gender value for ML model (0 = male, 1 = female)
+  int? get genderValue {
+    if (gender == null) return null;
+    return gender == Gender.male ? 0 : 1;
+  }
+
   // Get diabetes state color
   Color get diabetesStateColor {
     switch (diabetesState) {
@@ -79,13 +97,14 @@ class UserProfile {
 
   // Check if profile is complete
   bool get isComplete {
-    return age != null && weight != null && height != null;
+    return age != null && gender != null && weight != null && height != null;
   }
 
   // Convert to Map for storage
   Map<String, dynamic> toMap() {
     return {
       'age': age,
+      'gender': gender?.index,
       'diabetesState': diabetesState.index,
       'weight': weight,
       'height': height,
@@ -98,6 +117,7 @@ class UserProfile {
   factory UserProfile.fromMap(Map<String, dynamic> map) {
     return UserProfile(
       age: map['age']?.toInt(),
+      gender: map['gender'] != null ? Gender.values[map['gender']] : null,
       diabetesState: DiabetesState.values[map['diabetesState'] ?? 0],
       weight: map['weight']?.toDouble(),
       height: map['height']?.toDouble(),
@@ -114,6 +134,6 @@ class UserProfile {
 
   @override
   String toString() {
-    return 'UserProfile(age: $age, diabetesState: $diabetesState, weight: $weight, height: $height, bmi: ${bmi?.toStringAsFixed(1)})';
+    return 'UserProfile(age: $age, gender: $genderDisplay, diabetesState: $diabetesState, weight: $weight, height: $height, bmi: ${bmi?.toStringAsFixed(1)})';
   }
 }

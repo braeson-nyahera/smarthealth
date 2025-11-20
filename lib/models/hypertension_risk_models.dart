@@ -205,6 +205,8 @@ class HypertensionPrediction {
   final List<String> contributingFactors;
   final List<String> recommendations;
   final Map<String, double> futureProjections; // Next 7/30/90 days
+  final String method; // 'ml_model' or 'rule_based' or 'clinical_override'
+  final String? clinicalReason; // Clinical reasoning for the prediction
 
   HypertensionPrediction({
     required this.riskLevel,
@@ -214,7 +216,44 @@ class HypertensionPrediction {
     required this.contributingFactors,
     required this.recommendations,
     required this.futureProjections,
+    this.method = 'ml_model',
+    this.clinicalReason,
   });
+
+  /// Get model health status
+  String get modelHealth {
+    if (method == 'clinical_override') {
+      return 'Clinical Validation';
+    }
+    if (method == 'ml_model') {
+      if (confidence >= 0.85) {
+        return 'Excellent';
+      } else if (confidence >= 0.70) {
+        return 'Good';
+      } else {
+        return 'Fair';
+      }
+    } else {
+      return 'Rule-Based Fallback';
+    }
+  }
+
+  /// Get model health color
+  Color get modelHealthColor {
+    if (method == 'clinical_override') {
+      return Colors.purple;
+    }
+    if (method == 'rule_based') {
+      return Colors.amber;
+    }
+    if (confidence >= 0.85) {
+      return Colors.green;
+    } else if (confidence >= 0.70) {
+      return Colors.blue;
+    } else {
+      return Colors.orange;
+    }
+  }
 
   Map<String, dynamic> toJson() => {
     'riskLevel': riskLevel.name,
@@ -224,6 +263,8 @@ class HypertensionPrediction {
     'contributingFactors': contributingFactors,
     'recommendations': recommendations,
     'futureProjections': futureProjections,
+    'method': method,
+    'clinicalReason': clinicalReason,
   };
 }
 
@@ -288,10 +329,20 @@ class ModelTrainingData {
   });
 
   /// Check if there's enough data for reliable prediction
+  /// 
+  /// Minimal requirements for real-time predictions (runs every 3 hours):
+  /// - Heart rate: at least 1 data point (required)
+  /// - Blood pressure OR activity: at least 1 data point (at least one required)
+  /// 
+  /// This allows immediate predictions as soon as data is available,
+  /// rather than waiting for days of accumulated data.
   bool get hasEnoughData {
-    return bloodPressureData.length >= 7 && // At least 7 days of BP data
-        heartRateData.length >= 14 && // At least 14 days of heart rate
-        activityData.length >= 14; // At least 14 days of activity
+    final hasHeartRate = heartRateData.isNotEmpty;
+    final hasBloodPressure = bloodPressureData.isNotEmpty;
+    final hasActivity = activityData.isNotEmpty;
+    
+    // Must have heart rate AND at least one other metric for basic prediction
+    return hasHeartRate && (hasBloodPressure || hasActivity);
   }
 
   int get totalDataPoints =>

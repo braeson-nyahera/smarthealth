@@ -141,6 +141,11 @@ class _PredictionSchedulerStatusState extends State<PredictionSchedulerStatus> {
     final now = DateTime.now();
     final timeSince = now.difference(lastTime);
 
+    debugPrint('⏰ Prediction timestamp calculation:');
+    debugPrint('   Last prediction time: $lastTime');
+    debugPrint('   Current time: $now');
+    debugPrint('   Time difference: ${timeSince.inHours}h ${timeSince.inMinutes % 60}m');
+
     String lastTimeText;
     if (timeSince.inMinutes < 1) {
       lastTimeText = 'just now';

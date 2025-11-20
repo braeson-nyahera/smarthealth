@@ -32,12 +32,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
   final _heightController = TextEditingController();
   late PageController _pageController;
 
+  Gender? _selectedGender;
   DiabetesState _selectedDiabetesState = DiabetesState.none;
   int _currentStep = 0;
   bool _isSubmitting = false;
 
   final List<String> _stepTitles = [
     'Basic Information',
+    'Gender',
     'Health Information',
     'Physical Measurements',
     'Review & Complete',
@@ -91,6 +93,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
     if (profile.height != null) {
       _heightController.text = profile.height.toString();
     }
+    _selectedGender = profile.gender;
     _selectedDiabetesState = profile.diabetesState;
   }
 
@@ -140,6 +143,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
       // Create user profile
       final profile = UserProfile(
         age: int.tryParse(_ageController.text),
+        gender: _selectedGender,
         diabetesState: _selectedDiabetesState,
         weight: double.tryParse(_weightController.text),
         height: double.tryParse(_heightController.text),
@@ -194,6 +198,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                   },
                   children: [
                     _buildAgeStep(),
+                    _buildGenderStep(),
                     _buildDiabetesStep(),
                     _buildMeasurementsStep(),
                     _buildReviewStep(),
@@ -355,6 +360,116 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                   return null;
                 },
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGenderStep() {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppTheme.spacingL),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.wc_rounded, size: 64, color: AppTheme.primaryMedical),
+              const SizedBox(height: AppTheme.spacingL),
+              Text(
+                'What\'s your gender?',
+                style: AppTheme.headingLarge.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppTheme.spacingS),
+              Text(
+                'This helps us provide personalized health insights and accurate risk predictions.',
+                style: AppTheme.bodyLarge.copyWith(
+                  color: AppTheme.textSecondaryDark,
+                ),
+              ),
+              const SizedBox(height: AppTheme.spacingXL),
+              ...Gender.values.map((gender) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: AppTheme.spacingM),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusL),
+                      onTap: () {
+                        setState(() => _selectedGender = gender);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(AppTheme.spacingL),
+                        decoration: BoxDecoration(
+                          color:
+                              _selectedGender == gender
+                                  ? AppTheme.primaryMedical.withOpacity(0.1)
+                                  : AppTheme.surfaceElevated,
+                          border: Border.all(
+                            color:
+                                _selectedGender == gender
+                                    ? AppTheme.primaryMedical
+                                    : AppTheme.borderSubtle,
+                            width: _selectedGender == gender ? 2 : 1,
+                          ),
+                          borderRadius: BorderRadius.circular(AppTheme.radiusL),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(AppTheme.spacingM),
+                              decoration: BoxDecoration(
+                                color:
+                                    _selectedGender == gender
+                                        ? AppTheme.primaryMedical
+                                        : AppTheme.borderSubtle,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                gender == Gender.male
+                                    ? Icons.male_rounded
+                                    : Icons.female_rounded,
+                                color:
+                                    _selectedGender == gender
+                                        ? Colors.white
+                                        : AppTheme.textSecondaryDark,
+                              ),
+                            ),
+                            const SizedBox(width: AppTheme.spacingM),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    gender == Gender.male ? 'Male' : 'Female',
+                                    style: AppTheme.bodyLarge.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color:
+                                          _selectedGender == gender
+                                              ? AppTheme.primaryMedical
+                                              : AppTheme.textPrimaryDark,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_selectedGender == gender)
+                              Icon(
+                                Icons.check_circle_rounded,
+                                color: AppTheme.primaryMedical,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
             ],
           ),
         ),
@@ -550,6 +665,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
   Widget _buildReviewStep() {
     final profile = UserProfile(
       age: int.tryParse(_ageController.text),
+      gender: _selectedGender,
       diabetesState: _selectedDiabetesState,
       weight: double.tryParse(_weightController.text),
       height: double.tryParse(_heightController.text),
@@ -588,6 +704,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen>
                 'Age',
                 '${profile.age ?? '--'} years',
                 Icons.cake_rounded,
+              ),
+              _buildReviewCard(
+                'Gender',
+                profile.genderDisplay,
+                Icons.wc_rounded,
               ),
               _buildReviewCard(
                 'Diabetes Status',

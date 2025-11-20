@@ -414,14 +414,16 @@ class _SmartwatchStatsCardState extends State<SmartwatchStatsCard>
     }
 
     // Blood Pressure
-    if (widget.summaryData.containsKey('blood_pressure')) {
-      final bp = widget.summaryData['blood_pressure']!;
+    if (widget.summaryData.containsKey('blood_pressure_systolic') &&
+        widget.summaryData.containsKey('blood_pressure_diastolic')) {
+      final systolic = widget.summaryData['blood_pressure_systolic']!;
+      final diastolic = widget.summaryData['blood_pressure_diastolic']!;
       stats.add({
         'icon': Icons.bloodtype_rounded,
         'color': Colors.red.shade600,
-        'value': '${bp.latest.toInt()} mmHg',
+        'value': '${systolic.latest.toInt()}/${diastolic.latest.toInt()}',
         'label': 'Blood Pressure',
-        'trend': bp.trend,
+        'trend': systolic.trend,
       });
     } else {
       stats.add({

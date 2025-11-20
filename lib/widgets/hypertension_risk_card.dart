@@ -137,6 +137,165 @@ class HypertensionRiskCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(width: AppTheme.spacingXS),
+                    // Model health indicator
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.spacingS,
+                        vertical: AppTheme.spacingXS,
+                      ),
+                      decoration: BoxDecoration(
+                        color: prediction.modelHealthColor.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusS),
+                        border: Border.all(
+                          color: prediction.modelHealthColor.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            prediction.method == 'clinical_override'
+                                ? Icons.verified
+                                : prediction.method == 'ml_model'
+                                ? Icons.cloud_done
+                                : Icons.computer,
+                            size: 14,
+                            color: prediction.modelHealthColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            prediction.modelHealth,
+                            style: AppTheme.bodySmall.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: prediction.modelHealthColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: AppTheme.spacingL),
+
+              // Clinical Reason Display
+              if (prediction.clinicalReason != null &&
+                  prediction.clinicalReason!.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(AppTheme.spacingM),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusM),
+                    border: Border.all(color: Colors.purple.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline,
+                        color: Colors.purple,
+                        size: 18,
+                      ),
+                      const SizedBox(width: AppTheme.spacingM),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Clinical Classification',
+                              style: AppTheme.bodyMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.purple,
+                              ),
+                            ),
+                            const SizedBox(height: AppTheme.spacingXS),
+                            Text(
+                              prediction.clinicalReason!,
+                              style: AppTheme.bodyMedium.copyWith(
+                                color: AppTheme.textPrimaryDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              const SizedBox(height: AppTheme.spacingL),
+
+              // Model source indicator
+              Container(
+                padding: const EdgeInsets.all(AppTheme.spacingM),
+                decoration: BoxDecoration(
+                  color: (prediction.method == 'ml_model'
+                          ? Colors.blue
+                          : prediction.method == 'clinical_override'
+                          ? Colors.purple
+                          : Colors.amber)
+                      .withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusM),
+                  border: Border.all(
+                    color: (prediction.method == 'ml_model'
+                            ? Colors.blue
+                            : prediction.method == 'clinical_override'
+                            ? Colors.purple
+                            : Colors.amber)
+                        .withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      prediction.method == 'ml_model'
+                          ? Icons.cloud_queue
+                          : prediction.method == 'clinical_override'
+                          ? Icons.verified_user
+                          : Icons.warning_amber_rounded,
+                      color:
+                          prediction.method == 'ml_model'
+                              ? Colors.blue
+                              : prediction.method == 'clinical_override'
+                              ? Colors.purple
+                              : Colors.amber,
+                      size: 18,
+                    ),
+                    const SizedBox(width: AppTheme.spacingM),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            prediction.method == 'ml_model'
+                                ? 'ML Model Analysis'
+                                : prediction.method == 'clinical_override'
+                                ? 'Clinically Validated'
+                                : 'Rule-Based Analysis',
+                            style: AppTheme.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color:
+                                  prediction.method == 'ml_model'
+                                      ? Colors.blue
+                                      : prediction.method == 'clinical_override'
+                                      ? Colors.purple
+                                      : Colors.amber,
+                            ),
+                          ),
+                          Text(
+                            prediction.method == 'ml_model'
+                                ? 'Scientifically-backed assessment'
+                                : prediction.method == 'clinical_override'
+                                ? 'Clinically-backed assessment'
+                                : 'Guidelines-based assessment',
+                            style: AppTheme.bodySmall.copyWith(
+                              color: AppTheme.textSecondaryDark,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

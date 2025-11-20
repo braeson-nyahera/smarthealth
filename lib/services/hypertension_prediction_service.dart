@@ -6,8 +6,12 @@ import '../models/hypertension_risk_models.dart';
 /// Uses statistical analysis and pattern recognition
 class HypertensionPredictionService {
   /// Predict hypertension risk based on time series data
+  ///
+  /// Optionally accepts API recommendations to override generated recommendations.
+  /// If apiRecommendations is provided, it will be used instead of generating them locally.
   static Future<HypertensionPrediction> predictRisk({
     required ModelTrainingData trainingData,
+    List<String>? apiRecommendations,
   }) async {
     debugPrint('🔮 Starting hypertension risk prediction...');
 
@@ -37,12 +41,24 @@ class HypertensionPredictionService {
       trainingData.riskFactors,
     );
 
-    // Generate recommendations
-    final recommendations = _generateRecommendations(
-      riskLevel,
-      features,
-      trainingData.riskFactors,
-    );
+    // Use API recommendations if available, otherwise generate locally
+    List<String> recommendations;
+    if (apiRecommendations != null && apiRecommendations.isNotEmpty) {
+      recommendations = apiRecommendations;
+      debugPrint(
+        '✅ Using API recommendations (${recommendations.length} items)',
+      );
+    } else {
+      // Generate recommendations locally as fallback
+      recommendations = _generateRecommendations(
+        riskLevel,
+        features,
+        trainingData.riskFactors,
+      );
+      debugPrint(
+        '📝 Using locally generated recommendations (${recommendations.length} items)',
+      );
+    }
 
     // Project future trends
     final futureProjections = _projectFutureTrends(
@@ -57,6 +73,7 @@ class HypertensionPredictionService {
       contributingFactors: contributingFactors,
       recommendations: recommendations,
       futureProjections: futureProjections,
+      method: 'ml_model',
     );
   }
 
@@ -395,6 +412,7 @@ class HypertensionPredictionService {
         '📈 Collect at least 2 weeks of data for better predictions',
       ],
       futureProjections: {},
+      method: 'ml_model',
     );
   }
 

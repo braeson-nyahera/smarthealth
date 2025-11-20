@@ -122,6 +122,30 @@ class PredictionSchedulerService {
     debugPrint('✅ Prediction scheduler stopped');
   }
 
+  /// Clear stale predictions older than 24 hours
+  Future<void> clearStalePredictions() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final timeString = prefs.getString('last_prediction_time');
+      
+      if (timeString != null) {
+        final storedTime = DateTime.parse(timeString);
+        final ageInHours = DateTime.now().difference(storedTime).inHours;
+        
+        if (ageInHours > 24) {
+          debugPrint('🗑️ Clearing stale prediction data (${ageInHours}h old)');
+          await prefs.remove('last_prediction');
+          await prefs.remove('last_prediction_time');
+          _lastPredictionTime = null;
+          _latestPrediction = null;
+          debugPrint('✅ Stale prediction data cleared');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error clearing stale predictions: $e');
+    }
+  }
+
   /// Manually trigger a prediction (bypasses interval check)
   Future<HypertensionPrediction?> runPredictionNow({
     required HealthDataService healthDataService,
@@ -281,30 +305,44 @@ class PredictionSchedulerService {
       riskFactors = RiskFactors(age: 30, bmi: 25.0);
     }
 
-    debugPrint('   Blood pressure points: ${bloodPressureData.length}');
-    debugPrint('   Heart rate points: ${heartRateData.length}');
-    debugPrint('   Activity points: ${activityData.length}');
-    debugPrint('   Sleep points: ${sleepData.length}');
-
-    return ModelTrainingData(
+    debugPrint('   📊 Data collected:');
+    debugPrint('      • Blood pressure: ${bloodPressureData.length} points');
+    debugPrint('      • Heart rate: ${heartRateData.length} points');
+    debugPrint('      • Activity (steps): ${activityData.length} points');
+    debugPrint('      • Sleep: ${sleepData.length} points');
+    
+    final trainingData = ModelTrainingData(
       bloodPressureData: bloodPressureData,
       heartRateData: heartRateData,
       activityData: activityData,
       sleepData: sleepData,
       riskFactors: riskFactors,
     );
+    
+    debugPrint('   ✓ Requirements: HR(${heartRateData.length}≥1) + [BP(${bloodPressureData.length}≥1) OR Activity(${activityData.length}≥1)]');
+    debugPrint('   ✓ Has sufficient data: ${trainingData.hasEnoughData}');
+
+    return trainingData;
   }
 
   /// Save prediction to persistent storage
   Future<void> _savePrediction(HypertensionPrediction prediction) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      
+      // Ensure _lastPredictionTime is current (should be set before calling this)
+      final currentTime = _lastPredictionTime ?? DateTime.now();
+      
+      debugPrint('💾 Saving prediction with time: $currentTime');
+      
       await prefs.setString('last_prediction', jsonEncode(prediction.toJson()));
       await prefs.setString(
         'last_prediction_time',
-        _lastPredictionTime!.toIso8601String(),
+        currentTime.toIso8601String(),
       );
-      debugPrint('💾 Prediction saved to storage');
+      
+      debugPrint('✅ Prediction saved to storage');
+      debugPrint('   Time saved: $currentTime');
     } catch (e) {
       debugPrint('❌ Error saving prediction: $e');
     }
@@ -317,8 +355,28 @@ class PredictionSchedulerService {
       final predictionJson = prefs.getString('last_prediction');
       final timeString = prefs.getString('last_prediction_time');
 
+      debugPrint('📂 Loading prediction from storage...');
+      debugPrint('   Stored time string: $timeString');
+
       if (predictionJson != null && timeString != null) {
-        _lastPredictionTime = DateTime.parse(timeString);
+        final storedTime = DateTime.parse(timeString);
+        final ageInHours = DateTime.now().difference(storedTime).inHours;
+        
+        debugPrint('   Stored prediction age: $ageInHours hours');
+        
+        // Validate: discard predictions older than 24 hours (stale data)
+        if (ageInHours > 24) {
+          debugPrint('⚠️ Stored prediction is stale (${ageInHours}h old) - clearing');
+          await prefs.remove('last_prediction');
+          await prefs.remove('last_prediction_time');
+          _lastPredictionTime = null;
+          _latestPrediction = null;
+          return;
+        }
+        
+        _lastPredictionTime = storedTime;
+
+        debugPrint('✅ Successfully parsed stored time: $_lastPredictionTime');
 
         // Reconstruct prediction (simplified - you may need to expand this)
         final data = jsonDecode(predictionJson);
@@ -340,11 +398,17 @@ class PredictionSchedulerService {
               (k, v) => MapEntry(k.toString(), (v as num).toDouble()),
             ),
           ),
+          method: data['method'] as String? ?? 'ml_model',
+          clinicalReason: data['clinicalReason'] as String?,
         );
 
         debugPrint('📂 Loaded last prediction from storage');
         debugPrint('   Time: $_lastPredictionTime');
         debugPrint('   Risk: ${_latestPrediction!.riskLevel.label}');
+      } else {
+        debugPrint('⚠️ No stored prediction found');
+        debugPrint('   Prediction JSON: ${predictionJson != null ? 'present' : 'missing'}');
+        debugPrint('   Time string: ${timeString != null ? 'present' : 'missing'}');
       }
     } catch (e) {
       debugPrint('⚠️ Could not load last prediction: $e');
